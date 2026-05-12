@@ -14,16 +14,22 @@ class AuthScreen extends ConsumerStatefulWidget {
 }
 
 class _AuthScreenState extends ConsumerState<AuthScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLogin = true;
   bool _isLoading = false;
+  bool _obscurePassword = true;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   Future<void> _handleAuth() async {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      _showError('Please fill in all fields');
-      return;
-    }
+    if (!(_formKey.currentState?.validate() ?? false)) return;
 
     setState(() => _isLoading = true);
     try {
@@ -51,7 +57,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         }
       }
     } catch (e) {
-      _showError(e.toString());
+      _showError(e.toString().replaceAll('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -134,27 +140,40 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   
                   const SizedBox(height: 48),
                   
-                  GlassmorphicCard(
-                    padding: const EdgeInsets.all(28),
-                    borderRadius: 24,
-                    child: Column(
-                      children: [
-                        _buildTextField(
-                          controller: _emailController,
-                          label: 'Email Address',
-                          icon: Icons.email_outlined,
-                          type: TextInputType.emailAddress,
-                        ),
-                        const SizedBox(height: 20),
-                        _buildTextField(
-                          controller: _passwordController,
-                          label: 'Password',
-                          icon: Icons.lock_outline_rounded,
-                          isPassword: true,
-                        ),
-                        const SizedBox(height: 32),
-                        _buildPrimaryButton(),
-                      ],
+                  Form(
+                    key: _formKey,
+                    child: GlassmorphicCard(
+                      padding: const EdgeInsets.all(28),
+                      borderRadius: 24,
+                      child: Column(
+                        children: [
+                          _buildTextField(
+                            controller: _emailController,
+                            label: 'Email Address',
+                            icon: Icons.email_outlined,
+                            type: TextInputType.emailAddress,
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return 'Email is required';
+                              if (!v.contains('@')) return 'Enter a valid email';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                          _buildTextField(
+                            controller: _passwordController,
+                            label: 'Password',
+                            icon: Icons.lock_outline_rounded,
+                            isPassword: true,
+                            validator: (v) {
+                              if (v == null || v.isEmpty) return 'Password is required';
+                              if (!_isLogin && v.length < 6) return 'Minimum 6 characters';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 32),
+                          _buildPrimaryButton(),
+                        ],
+                      ),
                     ),
                   ).animate().fadeIn(delay: 600.ms).scale(begin: const Offset(0.95, 0.95)),
                   
@@ -202,16 +221,29 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     required IconData icon,
     bool isPassword = false,
     TextInputType type = TextInputType.text,
+    String? Function(String?)? validator,
   }) {
-    return TextField(
+    return TextFormField(
       controller: controller,
-      obscureText: isPassword,
+      obscureText: isPassword && _obscurePassword,
       keyboardType: type,
       style: TextStyle(color: context.textPrimary),
+      validator: validator,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: context.textMuted, fontSize: 14),
         prefixIcon: Icon(icon, size: 20, color: context.textMuted),
+        suffixIcon: isPassword
+            ? IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  size: 20,
+                  color: context.textMuted,
+                ),
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              )
+            : null,
         filled: true,
         fillColor: context.surfaceOverlay.withValues(alpha: 0.5),
         border: OutlineInputBorder(
@@ -222,6 +254,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)),
         ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Colors.redAccent, width: 1),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+        ),
+        errorStyle: const TextStyle(fontSize: 11),
       ),
     );
   }
@@ -283,7 +324,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           try {
             await AuthService.instance.signInWithGoogle();
           } catch (e) {
-            _showError(e.toString());
+            _showError(e.toString().replaceAll('Exception: ', ''));
           } finally {
             if (mounted) setState(() => _isLoading = false);
           }
@@ -293,12 +334,26 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           side: BorderSide(color: context.glassBorder.withValues(alpha: 0.2)),
           backgroundColor: context.surfaceCard.withValues(alpha: 0.5),
         ),
-        icon: Image.network(
-          'https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png',
+        icon: Container(
+          width: 24,
           height: 24,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: const Center(
+            child: Text(
+              'G',
+              style: TextStyle(
+                color: Color(0xFF4285F4),
+                fontWeight: FontWeight.w900,
+                fontSize: 16,
+              ),
+            ),
+          ),
         ),
         label: Text(
-          'Google Account',
+          'Continue with Google',
           style: TextStyle(
             color: context.textPrimary,
             fontWeight: FontWeight.w600,

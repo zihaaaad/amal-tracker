@@ -73,7 +73,7 @@ class AnalyticsScreen extends ConsumerWidget {
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.sageGreen,
-                    foregroundColor: AppColors.surface,
+                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),

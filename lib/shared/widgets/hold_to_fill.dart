@@ -74,7 +74,13 @@ class _HoldToFillState extends State<HoldToFill>
         _displayValue = 0; // reset
       }
     });
-    HapticFeedback.selectionClick();
+
+    // Premium haptics: heavy impact on completion, selection click otherwise
+    if (_displayValue == widget.maxValue) {
+      HapticFeedback.heavyImpact();
+    } else {
+      HapticFeedback.selectionClick();
+    }
     widget.onValueChanged(_displayValue);
 
     _animController.forward(from: 0);
@@ -104,7 +110,12 @@ class _HoldToFillState extends State<HoldToFill>
             _displayValue = 0;
           }
         });
-        HapticFeedback.selectionClick();
+        // Premium haptics
+        if (_displayValue == widget.maxValue) {
+          HapticFeedback.heavyImpact();
+        } else {
+          HapticFeedback.selectionClick();
+        }
         widget.onValueChanged(_displayValue);
       },
       child: SizedBox(

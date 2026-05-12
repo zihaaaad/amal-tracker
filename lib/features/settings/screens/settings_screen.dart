@@ -27,12 +27,25 @@ class SettingsScreen extends ConsumerWidget {
           _buildSectionTitle(context, 'Appearance'),
           _buildSettingsTile(context, 
             icon: Icons.dark_mode_rounded,
-            title: 'Premium Dark Mode',
-            subtitle: 'Amal Tracker adapts to your style',
+            title: 'Dark Mode',
+            subtitle: 'Switch between dark and light theme',
             trailing: Switch(
               value: settings.themeMode == ThemeMode.dark,
               onChanged: (val) {
-                ref.read(settingsProvider.notifier).toggleTheme(!val); // If dark is off, it's light
+                // val = true means user wants dark mode
+                ref.read(settingsProvider.notifier).toggleTheme(!val);
+              },
+              activeThumbColor: AppColors.sageGreenLight,
+            ),
+          ),
+          _buildSettingsTile(context,
+            icon: Icons.speed_rounded,
+            title: 'Performance Mode',
+            subtitle: 'Disable blur effects for smoother scrolling on older devices',
+            trailing: Switch(
+              value: settings.performanceMode,
+              onChanged: (val) {
+                ref.read(settingsProvider.notifier).togglePerformanceMode(val);
               },
               activeThumbColor: AppColors.sageGreenLight,
             ),
@@ -89,8 +102,6 @@ class SettingsScreen extends ConsumerWidget {
             },
           ),
           
-          const SizedBox(height: 24),
-
           const SizedBox(height: 24),
 
           // Data Management

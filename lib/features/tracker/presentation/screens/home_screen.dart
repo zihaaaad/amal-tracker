@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:confetti/confetti.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/theme_extension.dart';
 import '../../../tracker/providers/daily_log_provider.dart';
@@ -66,9 +67,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           children: [
             groupedTasksAsync.when(
               data: (groupedTasks) {
-                return CustomScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  slivers: [
+                return SlidableAutoCloseBehavior(
+                  child: CustomScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    slivers: [
                     // ─── Header ────────────────────────────────
                     SliverToBoxAdapter(
                       child: Padding(
@@ -153,8 +155,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       );
                     }),
 
-                    const SliverToBoxAdapter(child: SizedBox(height: 100)),
-                  ],
+                      const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                    ],
+                  ),
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),

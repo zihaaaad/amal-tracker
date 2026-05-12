@@ -33,7 +33,8 @@ final streakProvider = Provider<int>((ref) {
 });
 
 /// Provider for time-based context filtering.
-final timeContextProvider = StateProvider<TimeContext>((ref) {
+/// Uses a regular Provider so it always reads the current time.
+final timeContextProvider = Provider<TimeContext>((ref) {
   final hour = DateTime.now().hour;
   if (hour < 7) return TimeContext.earlyMorning;
   if (hour < 12) return TimeContext.morning;
