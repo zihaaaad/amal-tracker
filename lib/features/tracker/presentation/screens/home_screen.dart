@@ -1,4 +1,5 @@
- import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:confetti/confetti.dart';
@@ -37,9 +38,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void _checkCelebration(double completion) {
     if (completion >= 1.0 && !_hasCelebratedToday) {
       _hasCelebratedToday = true;
-      // Schedule after frame to avoid setState-during-build
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _confettiController.play();
+        if (!mounted) return;
+        // Premium haptic choreography: cascade → heavy punch
+        // This makes 100% feel like a real achievement, not just a checkmark
+        HapticFeedback.selectionClick();
+        Future.delayed(const Duration(milliseconds: 80), () {
+          HapticFeedback.selectionClick();
+          Future.delayed(const Duration(milliseconds: 80), () {
+            HapticFeedback.heavyImpact();
+          });
+        });
+        _confettiController.play();
       });
     } else if (completion < 1.0) {
       _hasCelebratedToday = false;

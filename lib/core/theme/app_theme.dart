@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 import 'app_typography.dart';
 
@@ -27,23 +28,22 @@ class AppTheme {
           outline: Color(0x1A000000),
           surfaceContainerHighest: Color(0xFFFFFFFF),
         ),
-        appBarTheme: const AppBarTheme(
+        appBarTheme: AppBarTheme(
           backgroundColor: Colors.transparent,
           elevation: 0,
           scrolledUnderElevation: 0,
-          systemOverlayStyle: SystemUiOverlayStyle(
+          systemOverlayStyle: const SystemUiOverlayStyle(
             statusBarColor: Colors.transparent,
             statusBarIconBrightness: Brightness.dark,
             systemNavigationBarColor: Color(0xFFF5F5F5),
             systemNavigationBarIconBrightness: Brightness.dark,
           ),
-          titleTextStyle: TextStyle(
-            fontFamily: 'Outfit',
+          titleTextStyle: GoogleFonts.outfit(
             fontSize: 20,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1A1A1A),
+            color: const Color(0xFF1A1A1A),
           ),
-          iconTheme: IconThemeData(color: Color(0xFF1A1A1A)),
+          iconTheme: const IconThemeData(color: Color(0xFF1A1A1A)),
         ),
         navigationBarTheme: NavigationBarThemeData(
           backgroundColor: const Color(0xFFFFFFFF),
@@ -102,23 +102,22 @@ class AppTheme {
         ),
 
         // AppBar
-        appBarTheme: const AppBarTheme(
+        appBarTheme: AppBarTheme(
           backgroundColor: Colors.transparent,
           elevation: 0,
           scrolledUnderElevation: 0,
-          systemOverlayStyle: SystemUiOverlayStyle(
+          systemOverlayStyle: const SystemUiOverlayStyle(
             statusBarColor: Colors.transparent,
             statusBarIconBrightness: Brightness.light,
             systemNavigationBarColor: AppColors.surface,
             systemNavigationBarIconBrightness: Brightness.light,
           ),
-          titleTextStyle: TextStyle(
-            fontFamily: 'Outfit',
+          titleTextStyle: GoogleFonts.outfit(
             fontSize: 20,
             fontWeight: FontWeight.w600,
             color: AppColors.textPrimary,
           ),
-          iconTheme: IconThemeData(color: AppColors.textPrimary),
+          iconTheme: const IconThemeData(color: AppColors.textPrimary),
         ),
 
         // Navigation bar
