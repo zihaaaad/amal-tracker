@@ -143,16 +143,61 @@ class SettingsScreen extends ConsumerWidget {
           ),
           
           const SizedBox(height: 40),
-          Center(
-            child: Text(
-              'Amal Tracker v1.0.0\nBuilt with Clean Architecture',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: context.textMuted,
-                fontSize: 12,
-              ),
+          
+          // About Section
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: context.surfaceCard,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: context.glassBorder),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: AppColors.sageGreen.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.sageGreen.withValues(alpha: 0.3)),
+                  ),
+                  child: const Icon(
+                    Icons.auto_awesome_rounded,
+                    color: AppColors.sageGreenLight,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Amal Tracker',
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: context.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Version 1.0.0',
+                  style: TextStyle(color: context.textMuted, fontSize: 12),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Track your daily Amal with sincerity.\nMay Allah accept from us all.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: context.textSecondary,
+                    fontSize: 13,
+                    height: 1.5,
+                  ),
+                ),
+              ],
             ),
           ),
+          const SizedBox(height: 32),
         ],
       ),
     );

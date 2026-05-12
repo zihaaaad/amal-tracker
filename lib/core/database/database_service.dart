@@ -32,6 +32,8 @@ class DailyLog {
         earnedPoints += task.points;
       }
     }
+    // Guard against division by zero
+    if (totalPossiblePoints == 0) return 0.0;
     return earnedPoints / totalPossiblePoints;
   }
 

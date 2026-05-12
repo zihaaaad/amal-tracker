@@ -18,7 +18,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-   late ConfettiController _confettiController;
+  late ConfettiController _confettiController;
   bool _hasCelebratedToday = false;
 
   @override
@@ -33,10 +33,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.dispose();
   }
 
-   void _checkCelebration(double completion) {
+  /// Called after every state change — safe place to trigger side-effects.
+  void _checkCelebration(double completion) {
     if (completion >= 1.0 && !_hasCelebratedToday) {
       _hasCelebratedToday = true;
-      _confettiController.play();
+      // Schedule after frame to avoid setState-during-build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _confettiController.play();
+      });
     } else if (completion < 1.0) {
       _hasCelebratedToday = false;
     }
@@ -57,8 +61,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final allTasks = allTasksAsync.value ?? [];
     final completion = dailyLog.calculateCompletion(allTasks);
     
-    // Trigger celebration if 100%
-    _checkCelebration(completion);
+    // React to completion changes cleanly — triggers after each task toggle
+    ref.listen(dailyLogProvider, (_, next) {
+      final tasks = ref.read(tasksProvider).value ?? [];
+      _checkCelebration(next.calculateCompletion(tasks));
+    });
 
     return Scaffold(
       backgroundColor: context.surface,
@@ -160,8 +167,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Error: $err')),
+              loading: () => Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 40, height: 40,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text('Loading your Amal...', style: TextStyle(color: context.textMuted, fontSize: 14)),
+                  ],
+                ),
+              ),
+              error: (err, stack) => Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.cloud_off_rounded, size: 48, color: context.textMuted),
+                      const SizedBox(height: 16),
+                      Text('Could not load tasks', style: TextStyle(color: context.textPrimary, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      Text('Showing offline data', style: TextStyle(color: context.textMuted, fontSize: 12)),
+                    ],
+                  ),
+                ),
+              ),
             ),
             
             // Celebration Layer

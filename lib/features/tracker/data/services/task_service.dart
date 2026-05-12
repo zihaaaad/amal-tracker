@@ -15,11 +15,11 @@ class TaskService {
   /// Fetches tasks with a "Stale-While-Revalidate" approach.
   /// Returns cached tasks immediately if available, then updates from network.
   Stream<List<AmalTask>> getTasksStream() async* {
-    // 1. Yield cached tasks immediately for instant UI
+    // 1. Yield cached tasks immediately for instant UI (seeds from local if empty)
     final cached = await getCachedTasks();
-    if (cached.isNotEmpty) yield cached;
+    yield cached;
 
-    // 2. Fetch fresh data from Supabase
+    // 2. Fetch fresh data from Supabase in the background
     try {
       final response = await _supabase
           .from('amal_tasks')
@@ -29,12 +29,14 @@ class TaskService {
 
       final freshTasks = (response as List).map((json) => AmalTask.fromJson(json)).toList();
       
-      // 3. Update cache if data changed
-      await _cacheTasks(freshTasks);
-      yield freshTasks;
+      // 3. Update cache and yield fresh data only if different
+      if (freshTasks.isNotEmpty) {
+        await _cacheTasks(freshTasks);
+        yield freshTasks;
+      }
     } catch (e) {
-      debugPrint('Network fetch failed: $e. Using cache.');
-      if (cached.isEmpty) yield [];
+      debugPrint('Network fetch failed: $e. Using cache/seed.');
+      // Already yielded above — no need to yield again
     }
   }
 
