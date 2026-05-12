@@ -118,7 +118,7 @@ Future<void> _showNotification(
 /// Initialize and register background tasks.
 class BackgroundService {
   static Future<void> initialize() async {
-    await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
+    await Workmanager().initialize(callbackDispatcher);
 
     // Register periodic task (runs approximately every 1 hour)
     await Workmanager().registerPeriodicTask(
@@ -126,11 +126,11 @@ class BackgroundService {
       AppConstants.backgroundTaskName,
       frequency: const Duration(hours: 1),
       constraints: Constraints(
-        networkType: NetworkType.not_required,
+        networkType: NetworkType.notRequired,
         requiresBatteryNotLow: false,
         requiresCharging: false,
       ),
-      existingWorkPolicy: ExistingWorkPolicy.replace,
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
     );
   }
 }
