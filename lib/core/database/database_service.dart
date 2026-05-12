@@ -16,39 +16,46 @@ class DailyLog {
     Map<String, dynamic>? values,
   }) : values = values ?? {};
 
-  /// Returns a value 0.0–1.0 representing daily completion.
-  /// Requires the list of tasks to know what to count.
+  /// Returns a value 0.0–1.0 representing daily completion based on weighted points.
   double calculateCompletion(List<AmalTask> tasks) {
     if (tasks.isEmpty) return 0.0;
-    int completed = 0;
+    int earnedPoints = 0;
+    int totalPossiblePoints = 0;
     for (final task in tasks) {
+      totalPossiblePoints += task.points;
       final val = values[task.id];
       if (task.inputType == TaskInputType.checkbox && val == true) {
-        completed++;
+        earnedPoints += task.points;
       } else if (task.inputType == TaskInputType.counter && (val ?? 0) >= 5) {
-        completed++;
+        earnedPoints += task.points;
       } else if (task.inputType == TaskInputType.numberInput && (val ?? 0) > 0) {
-        completed++;
+        earnedPoints += task.points;
       }
     }
-    return completed / tasks.length;
+    return earnedPoints / totalPossiblePoints;
   }
 
-  /// Number of completed items (for display).
-  int getCompletedCount(List<AmalTask> tasks) {
-    int count = 0;
+  /// Total points earned today.
+  int getEarnedPoints(List<AmalTask> tasks) {
+    int earnedPoints = 0;
     for (final task in tasks) {
       final val = values[task.id];
       if (task.inputType == TaskInputType.checkbox && val == true) {
-        count++;
+        earnedPoints += task.points;
       } else if (task.inputType == TaskInputType.counter && (val ?? 0) >= 5) {
-        count++;
+        earnedPoints += task.points;
       } else if (task.inputType == TaskInputType.numberInput && (val ?? 0) > 0) {
-        count++;
+        earnedPoints += task.points;
       }
     }
-    return count;
+    return earnedPoints;
   }
+
+  /// Total possible points for the given tasks.
+  int getTotalPoints(List<AmalTask> tasks) {
+    return tasks.fold(0, (sum, task) => sum + task.points);
+  }
+
 
   /// Get or set a boolean field by its string ID.
   bool getBool(String id) => values[id] == true;
@@ -235,4 +242,24 @@ class DatabaseService {
     // Batch upsert for efficiency
     await client.from('daily_logs').upsert(logsJson);
   }
+
+  /// Download history from Supabase and save locally.
+  Future<void> restoreFromCloud() async {
+    final client = Supabase.instance.client;
+    final user = client.auth.currentUser;
+    if (user == null) return;
+
+    final response = await client
+        .from('daily_logs')
+        .select()
+        .eq('user_id', user.id);
+
+    final List<dynamic> data = response as List<dynamic>;
+
+    for (final item in data) {
+      final log = DailyLog.fromJson(item as Map<String, dynamic>);
+      await saveLog(log);
+    }
+  }
 }
+

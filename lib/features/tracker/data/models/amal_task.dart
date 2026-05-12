@@ -17,6 +17,7 @@ class AmalTask {
   final String title;
   final TaskInputType inputType;
   final bool isActive;
+  final int points;
 
   AmalTask({
     required this.id,
@@ -24,6 +25,7 @@ class AmalTask {
     required this.title,
     required this.inputType,
     this.isActive = true,
+    this.points = 1,
   });
 
   Map<String, dynamic> toJson() => {
@@ -32,6 +34,7 @@ class AmalTask {
         'title': title,
         'input_type': inputType.name,
         'is_active': isActive,
+        'points': points,
       };
 
   factory AmalTask.fromJson(Map<String, dynamic> json) => AmalTask(
@@ -40,5 +43,7 @@ class AmalTask {
         title: json['title'] as String,
         inputType: TaskInputType.fromString(json['input_type'] as String),
         isActive: json['is_active'] as bool? ?? true,
+        points: json['points'] as int? ?? 1,
       );
 }
+

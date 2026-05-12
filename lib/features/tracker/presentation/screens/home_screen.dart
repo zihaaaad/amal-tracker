@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:confetti/confetti.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/theme_extension.dart';
 import '../../../tracker/providers/daily_log_provider.dart';
@@ -8,11 +9,36 @@ import '../widgets/progress_ring.dart';
 import '../../providers/tasks_provider.dart';
 import '../widgets/dynamic_task_card.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  late ConfettiController _confettiController;
+
+  @override
+  void initState() {
+    super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
+  }
+
+  void _checkCelebration(double completion) {
+    if (completion >= 1.0 && _confettiController.state != ConfettiControllerState.playing) {
+      _confettiController.play();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final dailyLog = ref.watch(dailyLogProvider);
     final streak = ref.watch(streakProvider);
     final timeContext = ref.watch(timeContextProvider);
@@ -23,106 +49,130 @@ class HomeScreen extends ConsumerWidget {
     final greeting = _getGreeting(now.hour);
     final dateStr = DateFormat('EEEE, MMM d').format(now);
 
+    final allTasks = allTasksAsync.value ?? [];
+    final completion = dailyLog.calculateCompletion(allTasks);
+    
+    // Trigger celebration if 100%
+    _checkCelebration(completion);
+
     return Scaffold(
       backgroundColor: context.surface,
       body: SafeArea(
-        child: groupedTasksAsync.when(
-          data: (groupedTasks) {
-            final allTasks = allTasksAsync.value ?? [];
-            return CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                // ─── Header ────────────────────────────────
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Stack(
+          children: [
+            groupedTasksAsync.when(
+              data: (groupedTasks) {
+                return CustomScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  slivers: [
+                    // ─── Header ────────────────────────────────
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  greeting,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: context.textSecondary,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      greeting,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: context.textSecondary,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      dateStr,
+                                      style: TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w700,
+                                        color: context.textPrimary,
+                                        letterSpacing: -0.5,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  dateStr,
-                                  style: TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w700,
-                                    color: context.textPrimary,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
+                                _buildTimeContextBadge(context, timeContext),
                               ],
                             ),
-                            // Time context indicator
-                            _buildTimeContextBadge(context, timeContext),
                           ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
 
-                // ─── Progress Ring ─────────────────────────
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                    child: ProgressRing(
-                      percentage: dailyLog.calculateCompletion(allTasks),
-                      completedCount: dailyLog.getCompletedCount(allTasks),
-                      totalCount: allTasks.length,
-                      streak: streak,
-                    ),
-                  ),
-                ),
-
-                // ─── Dynamic Categories ────────────────────
-                ...groupedTasks.entries.map((entry) {
-                  final category = entry.key;
-                  final tasks = entry.value;
-
-                  return SliverMainAxisGroup(
-                    slivers: [
-                      SliverToBoxAdapter(
-                        child: _SectionHeader(
-                          title: _getCategoryTitle(category),
-                          icon: _getCategoryIcon(category),
-                          color: _getCategoryColor(category),
+                    // ─── Progress Ring ─────────────────────────
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                        child: ProgressRing(
+                          percentage: completion,
+                          completedCount: dailyLog.getEarnedPoints(allTasks),
+                          totalCount: dailyLog.getTotalPoints(allTasks),
+                          streak: streak,
                         ),
                       ),
-                      SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              if (index >= tasks.length) return null;
-                              return DynamicTaskCard(task: tasks[index]);
-                            },
-                            childCount: tasks.length,
+                    ),
+
+                    // ─── Dynamic Categories ────────────────────
+                    ...groupedTasks.entries.map((entry) {
+                      final category = entry.key;
+                      final tasks = entry.value;
+
+                      return SliverMainAxisGroup(
+                        slivers: [
+                          SliverToBoxAdapter(
+                            child: _SectionHeader(
+                              title: _getCategoryTitle(category),
+                              icon: _getCategoryIcon(category),
+                              color: _getCategoryColor(category),
+                            ),
                           ),
-                        ),
-                      ),
-                    ],
-                  );
-                }),
+                          SliverPadding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            sliver: SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                                  if (index >= tasks.length) return null;
+                                  return DynamicTaskCard(task: tasks[index]);
+                                },
+                                childCount: tasks.length,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }),
 
-                const SliverToBoxAdapter(child: SizedBox(height: 100)),
-              ],
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(child: Text('Error: $err')),
+                    const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                  ],
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(child: Text('Error: $err')),
+            ),
+            
+            // Celebration Layer
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConfettiWidget(
+                confettiController: _confettiController,
+                blastDirectionality: BlastDirectionality.explosive,
+                shouldLoop: false,
+                colors: const [
+                  AppColors.sageGreen,
+                  AppColors.warmAmber,
+                  Colors.blueAccent,
+                  Colors.pinkAccent,
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -218,7 +268,6 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-/// Section header widget for each Amal category.
 class _SectionHeader extends StatelessWidget {
   final String title;
   final IconData icon;

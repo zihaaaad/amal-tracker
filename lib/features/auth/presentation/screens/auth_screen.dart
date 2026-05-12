@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/theme/theme_extension.dart';
 import '../../../../shared/widgets/glassmorphic_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import '../../../tracker/providers/daily_log_provider.dart';
 
-class AuthScreen extends StatefulWidget {
+class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
 
   @override
-  State<AuthScreen> createState() => _AuthScreenState();
+  ConsumerState<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen> {
+class _AuthScreenState extends ConsumerState<AuthScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLogin = true;
@@ -30,6 +32,10 @@ class _AuthScreenState extends State<AuthScreen> {
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
+        // Restore user history immediately after login
+        if (mounted) {
+          await ref.read(dailyLogProvider.notifier).restoreFromCloud();
+        }
       } else {
         await AuthService.instance.signUp(
           email: _emailController.text.trim(),
@@ -50,6 +56,7 @@ class _AuthScreenState extends State<AuthScreen> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
+
 
   void _showError(String message) {
     if (!mounted) return;
