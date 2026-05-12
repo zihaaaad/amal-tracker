@@ -27,7 +27,7 @@ class AuthService {
   Future<void> signInWithGoogle() async {
     await _supabase.auth.signInWithOAuth(
       OAuthProvider.google,
-      redirectTo: 'io.supabase.amaltraker://login-callback',
+      redirectTo: 'com.amaltracker.auth://callback',
     );
   }
 
