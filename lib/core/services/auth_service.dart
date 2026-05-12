@@ -21,6 +21,7 @@ class AuthService {
     return await _supabase.auth.signUp(
       email: email,
       password: password,
+      emailRedirectTo: 'com.amaltracker.auth://callback',
     );
   }
 
@@ -28,6 +29,7 @@ class AuthService {
     await _supabase.auth.signInWithOAuth(
       OAuthProvider.google,
       redirectTo: 'com.amaltracker.auth://callback',
+      authScreenLaunchMode: LaunchMode.externalApplication,
     );
   }
 

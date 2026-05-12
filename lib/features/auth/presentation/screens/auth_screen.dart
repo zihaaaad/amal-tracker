@@ -278,7 +278,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       width: double.infinity,
       height: 58,
       child: OutlinedButton.icon(
-        onPressed: () => AuthService.instance.signInWithGoogle(),
+        onPressed: _isLoading ? null : () async {
+          setState(() => _isLoading = true);
+          try {
+            await AuthService.instance.signInWithGoogle();
+          } catch (e) {
+            _showError(e.toString());
+          } finally {
+            if (mounted) setState(() => _isLoading = false);
+          }
+        },
         style: OutlinedButton.styleFrom(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           side: BorderSide(color: context.glassBorder.withValues(alpha: 0.2)),
