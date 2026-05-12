@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'features/settings/providers/settings_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/constants/app_constants.dart';
 import 'core/database/database_service.dart';
@@ -36,14 +37,17 @@ void main() async {
   );
 }
 
-class AmalTrackerApp extends StatelessWidget {
+class AmalTrackerApp extends ConsumerWidget {
   const AmalTrackerApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider);
+
     return MaterialApp(
       title: 'Amal Tracker',
-      themeMode: ThemeMode.dark, // Enforce premium dark mode
+      themeMode: settings.themeMode,
+      theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       home: const MainNavigationScreen(),
       debugShowCheckedModeBanner: false,

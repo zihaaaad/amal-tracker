@@ -3,12 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/database/database_service.dart';
 import '../../../tracker/providers/daily_log_provider.dart';
+import '../providers/settings_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider);
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
@@ -23,10 +26,12 @@ class SettingsScreen extends ConsumerWidget {
           _buildSettingsTile(
             icon: Icons.dark_mode_rounded,
             title: 'Premium Dark Mode',
-            subtitle: 'Amal Tracker is designed exclusively for dark mode',
+            subtitle: 'Amal Tracker adapts to your style',
             trailing: Switch(
-              value: true,
-              onChanged: null, // Always true for now based on requirements
+              value: settings.themeMode == ThemeMode.dark,
+              onChanged: (val) {
+                ref.read(settingsProvider.notifier).toggleTheme(!val); // If dark is off, it's light
+              },
               activeThumbColor: AppColors.sageGreenLight,
             ),
           ),
@@ -40,9 +45,9 @@ class SettingsScreen extends ConsumerWidget {
             title: 'Allow Notifications',
             subtitle: 'Reminders for prayers, sleep, and streaks',
             trailing: Switch(
-              value: true, // Typically managed by permissions
+              value: settings.notificationsEnabled, // Typically managed by permissions
               onChanged: (val) {
-                // Implementation for toggling permissions goes here
+                ref.read(settingsProvider.notifier).toggleNotifications(val);
               },
               activeThumbColor: AppColors.sageGreenLight,
             ),
