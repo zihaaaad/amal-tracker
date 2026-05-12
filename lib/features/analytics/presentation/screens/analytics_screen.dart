@@ -158,8 +158,11 @@ class AnalyticsScreen extends ConsumerWidget {
   }
 
   Widget _buildLineChart(BuildContext context, List<DailyLog> logs, List<AmalTask> tasks) {
+    final now = DateTime.now();
+    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    
     final spots = <FlSpot>[];
-    for (int i = 0; i < 30; i++) {
+    for (int i = 0; i < daysInMonth; i++) {
       if (i < logs.length) {
         spots.add(FlSpot(i.toDouble(), logs[i].calculateCompletion(tasks) * 100));
       } else {
@@ -199,6 +202,7 @@ class AnalyticsScreen extends ConsumerWidget {
                 reservedSize: 30,
                 interval: 5,
                 getTitlesWidget: (value, meta) {
+                  if (value > daysInMonth - 1) return const SizedBox.shrink();
                   return Padding(
                     padding: const EdgeInsets.only(top: 8.0),
                     child: Text(
@@ -231,7 +235,7 @@ class AnalyticsScreen extends ConsumerWidget {
           ),
           borderData: FlBorderData(show: false),
           minX: 0,
-          maxX: 29,
+          maxX: daysInMonth.toDouble() - 1,
           minY: 0,
           maxY: 100,
           lineBarsData: [
