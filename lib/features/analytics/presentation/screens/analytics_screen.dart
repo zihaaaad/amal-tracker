@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:printing/printing.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../tracker/providers/daily_log_provider.dart';
+import '../../pdf_report/pdf_generator.dart';
 
 class AnalyticsScreen extends ConsumerWidget {
   const AnalyticsScreen({super.key});
@@ -46,11 +48,19 @@ class AnalyticsScreen extends ConsumerWidget {
               width: double.infinity,
               height: 56,
               child: ElevatedButton.icon(
-                onPressed: () {
-                  // Connect to PDF generator
+                onPressed: () async {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Generating PDF Report...')),
                   );
+                  try {
+                    final month = DateTime.now();
+                    final bytes = await PdfGenerator.generateMonthlyReport(month, monthLogs);
+                    await Printing.sharePdf(bytes: bytes, filename: 'amal_report_${month.month}_${month.year}.pdf');
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to generate PDF: $e')),
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.sageGreen,

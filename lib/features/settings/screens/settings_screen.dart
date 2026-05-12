@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/database/database_service.dart';
+import '../../../tracker/providers/daily_log_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -72,9 +74,31 @@ class SettingsScreen extends ConsumerWidget {
             iconColor: AppColors.softCoral,
             titleColor: AppColors.softCoral,
             onTap: () {
-              // Implementation for wiping local database
-               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Data reset disabled in demo')),
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Clear All Data?'),
+                  content: const Text('This will permanently delete all your tracking history. This cannot be undone.'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        await DatabaseService.instance.clearAllData();
+                        ref.read(dailyLogProvider.notifier).refreshToday();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('All data cleared successfully')),
+                          );
+                        }
+                      },
+                      child: const Text('Delete', style: TextStyle(color: AppColors.softCoral)),
+                    ),
+                  ],
+                ),
               );
             },
           ),

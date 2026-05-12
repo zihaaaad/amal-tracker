@@ -382,4 +382,12 @@ class DatabaseService {
         .toList()
       ..sort();
   }
+
+  /// Clear all stored log data.
+  Future<void> clearAllData() async {
+    final keys = _prefs.getKeys().where((k) => k.startsWith('log_')).toList();
+    for (final key in keys) {
+      await _prefs.remove(key);
+    }
+  }
 }
