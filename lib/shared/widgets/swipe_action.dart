@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/theme_extension.dart';
 
 /// Swipe-to-complete action wrapper.
 /// Swipe right to mark as complete, with spring-back animation.
@@ -101,14 +102,14 @@ class _SwipeActionState extends State<SwipeAction>
                 children: [
                   Icon(
                     Icons.check_circle_rounded,
-                    color: AppColors.textPrimary.withValues(alpha: clampedRatio),
+                    color: context.textPrimary.withValues(alpha: clampedRatio),
                     size: 28,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     'Complete',
                     style: TextStyle(
-                      color: AppColors.textPrimary.withValues(alpha: clampedRatio),
+                      color: context.textPrimary.withValues(alpha: clampedRatio),
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),

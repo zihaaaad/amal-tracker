@@ -2,17 +2,17 @@ import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:intl/intl.dart';
+import '../tracker/data/models/amal_task.dart';
 import '../../../core/database/database_service.dart';
 
 class PdfGenerator {
   static Future<Uint8List> generateMonthlyReport(
-      DateTime month, List<DailyLog> logs) async {
+      DateTime month, List<DailyLog> logs, List<AmalTask> tasks) async {
     final pdf = pw.Document();
 
     final monthName = DateFormat('MMMM yyyy').format(month);
     final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
 
-    // Create a map of day -> DailyLog for easy lookup
     final logMap = {
       for (var log in logs) DateTime.parse(log.date).day: log,
     };
@@ -25,9 +25,9 @@ class PdfGenerator {
           return [
             _buildHeader(monthName),
             pw.SizedBox(height: 20),
-            _buildStatistics(logs),
+            _buildStatistics(logs, tasks),
             pw.SizedBox(height: 20),
-            _buildDataTable(daysInMonth, logMap),
+            _buildDataTable(daysInMonth, logMap, tasks),
           ];
         },
       ),
@@ -62,15 +62,19 @@ class PdfGenerator {
     );
   }
 
-  static pw.Widget _buildStatistics(List<DailyLog> logs) {
-    if (logs.isEmpty) {
+  static pw.Widget _buildStatistics(List<DailyLog> logs, List<AmalTask> tasks) {
+    if (logs.isEmpty || tasks.isEmpty) {
       return pw.Text('No data recorded for this month.');
     }
 
     final totalDays = logs.length;
-    final totalFajr = logs.where((l) => l.fajr).length;
+    final avgCompletion = logs.fold(0.0, (sum, log) => sum + log.calculateCompletion(tasks)) / totalDays;
 
-    final avgCompletion = logs.fold(0.0, (sum, log) => sum + log.completionPercentage) / totalDays;
+    // Find "Fajr" task for specific stat if it exists
+    final fajrTask = tasks.where((t) => t.title.toLowerCase().contains('fajr')).firstOrNull;
+    final fajrConsistency = fajrTask != null 
+        ? logs.where((l) => l.getBool(fajrTask.id)).length / totalDays
+        : 0.0;
 
     return pw.Container(
       padding: const pw.EdgeInsets.all(12),
@@ -84,15 +88,11 @@ class PdfGenerator {
         children: [
           _buildStatItem('Active Days', '$totalDays'),
           _buildStatItem('Avg Completion', '${(avgCompletion * 100).round()}%'),
-          _buildStatItem('Fajr Consistency', '${((totalFajr / totalDays) * 100).round()}%'),
-          _buildStatItem('All 5 Prayers', '${(_calculateAllPrayers(logs) / totalDays * 100).round()}%'),
+          if (fajrTask != null)
+            _buildStatItem('Fajr Consistency', '${(fajrConsistency * 100).round()}%'),
         ],
       ),
     );
-  }
-
-  static int _calculateAllPrayers(List<DailyLog> logs) {
-    return logs.where((l) => l.fajr && l.dhuhr && l.asr && l.maghrib && l.isha).length;
   }
 
   static pw.Widget _buildStatItem(String label, String value) {
@@ -105,44 +105,32 @@ class PdfGenerator {
     );
   }
 
-  static pw.Widget _buildDataTable(int daysInMonth, Map<int, DailyLog> logMap) {
-    // Select key columns to keep table readable
-    final columns = [
-      'Day',
-      'Fajr',
-      'Dhuhr',
-      'Asr',
-      'Maghrib',
-      'Isha',
-      'Dua',
-      'Time',
-      'Sleep',
+  static pw.Widget _buildDataTable(int daysInMonth, Map<int, DailyLog> logMap, List<AmalTask> tasks) {
+    // Select the first 8 checkbox tasks to keep table readable
+    final displayTasks = tasks
+        .where((t) => t.inputType == TaskInputType.checkbox)
+        .take(8)
+        .toList();
+
+    final headers = [
+      pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Day', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8))),
+      ...displayTasks.map((t) => pw.Padding(
+        padding: const pw.EdgeInsets.all(4),
+        child: pw.Text(t.title, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8)),
+      )),
     ];
 
-    final headers = columns.map((c) => pw.Padding(
-      padding: const pw.EdgeInsets.all(4),
-      child: pw.Text(c, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
-    )).toList();
-
-    final data = <List<pw.Widget>>[];
+    final dataRows = <pw.TableRow>[];
 
     for (int day = 1; day <= daysInMonth; day++) {
       final log = logMap[day];
       
-      data.add([
-        pw.Padding(
-          padding: const pw.EdgeInsets.all(4),
-          child: pw.Text('$day', style: const pw.TextStyle(fontSize: 10)),
-        ),
-        _buildCellMark(log?.fajr),
-        _buildCellMark(log?.dhuhr),
-        _buildCellMark(log?.asr),
-        _buildCellMark(log?.maghrib),
-        _buildCellMark(log?.isha),
-        _buildCellMark(log?.fiveMinDua),
-        _buildCellMark(log?.salahOnTime),
-        _buildCellMark(log?.sleptBefore1030),
-      ]);
+      dataRows.add(pw.TableRow(
+        children: [
+          pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('$day', style: const pw.TextStyle(fontSize: 8))),
+          ...displayTasks.map((t) => _buildCellMark(log?.getBool(t.id))),
+        ],
+      ));
     }
 
     return pw.Table(
@@ -152,7 +140,7 @@ class PdfGenerator {
           decoration: const pw.BoxDecoration(color: PdfColors.grey200),
           children: headers,
         ),
-        ...data.map((row) => pw.TableRow(children: row)),
+        ...dataRows,
       ],
     );
   }
@@ -161,7 +149,7 @@ class PdfGenerator {
     if (isCompleted == null) {
       return pw.Padding(
         padding: const pw.EdgeInsets.all(4),
-        child: pw.Text('-', textAlign: pw.TextAlign.center, style: const pw.TextStyle(color: PdfColors.grey400)),
+        child: pw.Text('-', textAlign: pw.TextAlign.center, style: const pw.TextStyle(color: PdfColors.grey400, fontSize: 8)),
       );
     }
     
@@ -171,6 +159,7 @@ class PdfGenerator {
         isCompleted ? 'Y' : 'N',
         textAlign: pw.TextAlign.center,
         style: pw.TextStyle(
+          fontSize: 8,
           color: isCompleted ? PdfColors.green700 : PdfColors.red700,
           fontWeight: isCompleted ? pw.FontWeight.bold : pw.FontWeight.normal,
         ),

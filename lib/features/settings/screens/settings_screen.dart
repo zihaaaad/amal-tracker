@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/theme_extension.dart';
 import '../../../../core/database/database_service.dart';
-import '../../../tracker/providers/daily_log_provider.dart';
+import '../../tracker/providers/daily_log_provider.dart';
 import '../providers/settings_provider.dart';
+import '../../../../core/services/auth_service.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -13,7 +15,7 @@ class SettingsScreen extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.surface,
       appBar: AppBar(
         title: const Text('Settings'),
         centerTitle: true,
@@ -22,8 +24,8 @@ class SettingsScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(20),
         children: [
           // Theme Section
-          _buildSectionTitle('Appearance'),
-          _buildSettingsTile(
+          _buildSectionTitle(context, 'Appearance'),
+          _buildSettingsTile(context, 
             icon: Icons.dark_mode_rounded,
             title: 'Premium Dark Mode',
             subtitle: 'Amal Tracker adapts to your style',
@@ -39,8 +41,8 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 24),
           
           // Notifications
-          _buildSectionTitle('Smart Notifications'),
-          _buildSettingsTile(
+          _buildSectionTitle(context, 'Smart Notifications'),
+          _buildSettingsTile(context, 
             icon: Icons.notifications_active_rounded,
             title: 'Allow Notifications',
             subtitle: 'Reminders for prayers, sleep, and streaks',
@@ -55,24 +57,45 @@ class SettingsScreen extends ConsumerWidget {
           
           const SizedBox(height: 24),
 
-          // Account (Supabase placeholder)
-          _buildSectionTitle('Account & Sync'),
-          _buildSettingsTile(
+          // Account & Sync
+          _buildSectionTitle(context, 'Account & Sync'),
+          _buildSettingsTile(context, 
             icon: Icons.cloud_sync_rounded,
-            title: 'Cloud Backup',
-            subtitle: 'Sync data to Supabase (Coming soon)',
-            onTap: () {
-               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Cloud sync requires authentication')),
-              );
+            title: 'Sync Now',
+            subtitle: 'Backup your data to the cloud',
+            onTap: () async {
+              try {
+                await DatabaseService.instance.syncToCloud();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Sync completed successfully!')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Sync failed: $e'), backgroundColor: Colors.redAccent),
+                  );
+                }
+              }
+            },
+          ),
+          _buildSettingsTile(context, 
+            icon: Icons.logout_rounded,
+            title: 'Logout',
+            subtitle: 'Sign out from your account',
+            onTap: () async {
+              await AuthService.instance.signOut();
             },
           ),
           
           const SizedBox(height: 24),
 
+          const SizedBox(height: 24),
+
           // Data Management
-          _buildSectionTitle('Data Management'),
-          _buildSettingsTile(
+          _buildSectionTitle(context, 'Data Management'),
+          _buildSettingsTile(context, 
             icon: Icons.delete_outline_rounded,
             title: 'Clear Local Data',
             subtitle: 'Permanently delete all logs from this device',
@@ -87,7 +110,7 @@ class SettingsScreen extends ConsumerWidget {
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                      child: Text('Cancel', style: TextStyle(color: context.textSecondary)),
                     ),
                     TextButton(
                       onPressed: () async {
@@ -109,12 +132,12 @@ class SettingsScreen extends ConsumerWidget {
           ),
           
           const SizedBox(height: 40),
-          const Center(
+          Center(
             child: Text(
               'Amal Tracker v1.0.0\nBuilt with Clean Architecture',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: AppColors.textMuted,
+                color: context.textMuted,
                 fontSize: 12,
               ),
             ),
@@ -124,13 +147,13 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12, left: 4),
       child: Text(
         title,
-        style: const TextStyle(
-          color: AppColors.textSecondary,
+        style: TextStyle(
+          color: context.textSecondary,
           fontSize: 14,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.5,
@@ -139,7 +162,7 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSettingsTile({
+  Widget _buildSettingsTile(BuildContext context, {
     required IconData icon,
     required String title,
     required String subtitle,
@@ -151,9 +174,9 @@ class SettingsScreen extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
+        color: context.surfaceCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.glassBorder),
+        border: Border.all(color: context.glassBorder),
       ),
       child: ListTile(
         onTap: onTap,
@@ -172,20 +195,20 @@ class SettingsScreen extends ConsumerWidget {
         title: Text(
           title,
           style: TextStyle(
-            color: titleColor ?? AppColors.textPrimary,
+            color: titleColor ?? context.textPrimary,
             fontWeight: FontWeight.w600,
             fontSize: 15,
           ),
         ),
         subtitle: Text(
           subtitle,
-          style: const TextStyle(
-            color: AppColors.textMuted,
+          style: TextStyle(
+            color: context.textMuted,
             fontSize: 12,
           ),
         ),
         trailing: trailing ?? (onTap != null 
-            ? const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted) 
+            ? Icon(Icons.chevron_right_rounded, color: context.textMuted) 
             : null),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),

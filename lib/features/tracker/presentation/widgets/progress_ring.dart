@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/theme_extension.dart';
 
 /// Circular progress ring showing daily completion percentage.
 class ProgressRing extends StatelessWidget {
@@ -19,141 +20,143 @@ class ProgressRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: AppColors.cardGradient,
-        border: Border.all(color: AppColors.glassBorder),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.sageGreen.withValues(alpha: percentage * 0.15),
-            blurRadius: 30,
-            spreadRadius: -10,
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        children: [
-          // Circular progress
-          SizedBox(
-            width: 90,
-            height: 90,
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: percentage),
-              duration: const Duration(milliseconds: 1200),
-              curve: Curves.easeOutCubic,
-              builder: (context, value, child) {
-                return CustomPaint(
-                  painter: _ProgressRingPainter(
-                    progress: value,
-                    backgroundColor: AppColors.surfaceOverlay,
-                    progressColor: _getProgressColor(value),
-                    strokeWidth: 6,
+    return RepaintBoundary(
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: context.cardGradient,
+          border: Border.all(color: context.glassBorder),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.sageGreen.withValues(alpha: percentage * 0.15),
+              blurRadius: 30,
+              spreadRadius: -10,
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            // Circular progress
+            SizedBox(
+              width: 90,
+              height: 90,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: percentage),
+                duration: const Duration(milliseconds: 1200),
+                curve: Curves.easeOutCubic,
+                builder: (context, value, child) {
+                  return CustomPaint(
+                    painter: _ProgressRingPainter(
+                      progress: value,
+                      backgroundColor: context.surfaceOverlay,
+                      progressColor: _getProgressColor(value),
+                      strokeWidth: 6,
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '${(value * 100).round()}%',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                              color: context.textPrimary,
+                              height: 1,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'done',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: context.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            const SizedBox(width: 20),
+
+            // Stats column
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Today\'s Progress',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: context.textPrimary,
+                    ),
                   ),
-                  child: Center(
-                    child: Column(
+                  const SizedBox(height: 4),
+                  Text(
+                    '$completedCount of $totalCount completed',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: context.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Streak badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: streak > 0
+                          ? AppColors.warmAmber.withValues(alpha: 0.15)
+                          : context.surfaceOverlay,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: streak > 0
+                            ? AppColors.warmAmber.withValues(alpha: 0.3)
+                            : context.glassBorder,
+                      ),
+                    ),
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          '${(value * 100).round()}%',
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
-                            height: 1,
-                          ),
+                        Icon(
+                          streak > 0
+                              ? Icons.local_fire_department_rounded
+                              : Icons.emoji_events_outlined,
+                          color: streak > 0
+                              ? AppColors.warmAmber
+                              : context.textMuted,
+                          size: 16,
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(width: 4),
                         Text(
-                          'done',
+                          streak > 0
+                              ? '$streak day streak'
+                              : 'Start your streak',
                           style: TextStyle(
-                            fontSize: 10,
-                            color: AppColors.textMuted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: streak > 0
+                                ? AppColors.warmAmberLight
+                                : context.textMuted,
                           ),
                         ),
                       ],
                     ),
                   ),
-                );
-              },
+                ],
+              ),
             ),
-          ),
-
-          const SizedBox(width: 20),
-
-          // Stats column
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Today\'s Progress',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$completedCount of $totalCount completed',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Streak badge
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: streak > 0
-                        ? AppColors.warmAmber.withValues(alpha: 0.15)
-                        : AppColors.surfaceOverlay,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: streak > 0
-                          ? AppColors.warmAmber.withValues(alpha: 0.3)
-                          : AppColors.glassBorder,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        streak > 0
-                            ? Icons.local_fire_department_rounded
-                            : Icons.emoji_events_outlined,
-                        color: streak > 0
-                            ? AppColors.warmAmber
-                            : AppColors.textMuted,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        streak > 0
-                            ? '$streak day streak'
-                            : 'Start your streak',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: streak > 0
-                              ? AppColors.warmAmberLight
-                              : AppColors.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

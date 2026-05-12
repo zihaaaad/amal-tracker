@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/theme_extension.dart';
 
 /// Hold-to-fill circular counter widget.
 /// User taps and holds to increment the counter with haptic feedback.
@@ -119,7 +120,7 @@ class _HoldToFillState extends State<HoldToFill>
               child: CircularProgressIndicator(
                 value: 1.0,
                 strokeWidth: 3,
-                color: AppColors.surfaceOverlay,
+                color: context.surfaceOverlay,
                 strokeCap: StrokeCap.round,
               ),
             ),
@@ -156,7 +157,7 @@ class _HoldToFillState extends State<HoldToFill>
                 fontWeight: FontWeight.w700,
                 color: isComplete
                     ? AppColors.sageGreenLight
-                    : AppColors.textPrimary,
+                    : context.textPrimary,
               ),
               child: Text('$_displayValue'),
             ),

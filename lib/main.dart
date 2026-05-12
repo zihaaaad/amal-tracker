@@ -10,6 +10,8 @@ import 'core/theme/app_theme.dart';
 import 'features/tracker/presentation/screens/home_screen.dart';
 import 'features/analytics/presentation/screens/analytics_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
+import 'features/auth/presentation/screens/auth_screen.dart';
+import 'features/auth/providers/auth_provider.dart';
 
 void main() async {
   // Ensure Flutter bindings are initialized before calling async methods
@@ -49,7 +51,9 @@ class AmalTrackerApp extends ConsumerWidget {
       themeMode: settings.themeMode,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      home: const MainNavigationScreen(),
+      home: ref.watch(sessionProvider) != null 
+          ? const MainNavigationScreen() 
+          : const AuthScreen(),
       debugShowCheckedModeBanner: false,
     );
   }

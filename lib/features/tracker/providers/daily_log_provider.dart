@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/database_service.dart';
+import 'tasks_provider.dart';
 
 /// Provider for the database service singleton.
 final databaseProvider = Provider<DatabaseService>((ref) {
@@ -15,9 +16,10 @@ final dailyLogProvider =
 
 /// Provider for the current streak count.
 final streakProvider = Provider<int>((ref) {
-  // Re-read when dailyLog changes
+  // Re-read when dailyLog or tasks change
   ref.watch(dailyLogProvider);
-  return DatabaseService.instance.calculateStreak();
+  final tasks = ref.watch(tasksProvider).value ?? [];
+  return DatabaseService.instance.calculateStreak(tasks);
 });
 
 /// Provider for time-based context filtering.
@@ -82,25 +84,19 @@ class DailyLogNotifier extends StateNotifier<DailyLog> {
 
   DailyLogNotifier(this._db) : super(_db.getTodayLog());
 
-  /// Toggle a boolean field.
-  Future<void> toggleItem(String id) async {
-    state.toggle(id);
-    state = state.copyWith();
+  /// Toggle a boolean task.
+  Future<void> toggleTask(String taskId) async {
+    final currentValues = Map<String, dynamic>.from(state.values);
+    currentValues[taskId] = !(currentValues[taskId] == true);
+    state = state.copyWith(values: currentValues);
     await _db.saveLog(state);
   }
 
-  /// Increment a counter field.
-  Future<int> incrementCounter(String id, int max) async {
-    final newVal = state.increment(id, max);
-    state = state.copyWith();
-    await _db.saveLog(state);
-    return newVal;
-  }
-
-  /// Set a counter to a specific value.
-  Future<void> setCounter(String id, int value) async {
-    state.setCounter(id, value);
-    state = state.copyWith();
+  /// Update a counter or number input.
+  Future<void> updateCounter(String taskId, int value) async {
+    final currentValues = Map<String, dynamic>.from(state.values);
+    currentValues[taskId] = value;
+    state = state.copyWith(values: currentValues);
     await _db.saveLog(state);
   }
 

@@ -2,6 +2,7 @@ import 'package:workmanager/workmanager.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../constants/app_constants.dart';
 import '../database/database_service.dart';
+import '../../features/tracker/data/services/task_service.dart';
 
 /// Background service for smart notifications using WorkManager.
 /// Runs completely offline — no API calls needed.
@@ -32,11 +33,13 @@ void callbackDispatcher() {
         );
       }
 
+      final tasks = await TaskService.instance.getCachedTasks();
+
       // ── Rule 2: Evening Incomplete Alert (8 PM) ───
       if (now.hour == AppConstants.eveningCheckHour) {
-        final pct = todayLog.completionPercentage;
+        final pct = todayLog.calculateCompletion(tasks);
         if (pct < 0.5) {
-          final streak = db.calculateStreak();
+          final streak = db.calculateStreak(tasks);
           final streakMsg = streak > 0
               ? 'You have a $streak-day streak! Don\'t break it.'
               : 'Start building your streak today.';
@@ -53,7 +56,7 @@ void callbackDispatcher() {
       // ── Rule 3: Sleep Reminder (10:00 PM) ─────────
       if (now.hour == AppConstants.sleepReminderHour &&
           now.minute <= AppConstants.sleepReminderMinute + 15) {
-        if (!todayLog.sleptBefore1030) {
+        if (!todayLog.getBool('sleptBefore1030')) {
           await _showNotification(
             notificationsPlugin,
             id: 3,
@@ -66,7 +69,7 @@ void callbackDispatcher() {
 
       // ── Rule 4: Friday Reminder (12 PM Friday) ────
       if (now.weekday == DateTime.friday && now.hour == 12) {
-        if (!todayLog.surahKahf) {
+        if (!todayLog.getBool('surahKahf')) {
           await _showNotification(
             notificationsPlugin,
             id: 4,
@@ -78,8 +81,8 @@ void callbackDispatcher() {
 
       // ── Rule 5: Streak Alert (9 PM) ───────────────
       if (now.hour == 21) {
-        final streak = db.calculateStreak();
-        if (streak >= 3 && todayLog.completionPercentage >= 0.5) {
+        final streak = db.calculateStreak(tasks);
+        if (streak >= 3 && todayLog.calculateCompletion(tasks) >= 0.5) {
           await _showNotification(
             notificationsPlugin,
             id: 5,

@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/constants/salah_data.dart';
+import '../../../../core/theme/theme_extension.dart';
 import '../../../tracker/providers/daily_log_provider.dart';
-import '../widgets/salah_card.dart';
-import '../widgets/zikr_counter_card.dart';
-import '../widgets/habit_card.dart';
 import '../widgets/progress_ring.dart';
+import '../../providers/tasks_provider.dart';
+import '../widgets/dynamic_task_card.dart';
 
-/// The main home screen with a premium Bento grid layout.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -18,307 +16,175 @@ class HomeScreen extends ConsumerWidget {
     final dailyLog = ref.watch(dailyLogProvider);
     final streak = ref.watch(streakProvider);
     final timeContext = ref.watch(timeContextProvider);
+    final groupedTasksAsync = ref.watch(groupedTasksProvider);
+    final allTasksAsync = ref.watch(tasksProvider);
 
     final now = DateTime.now();
     final greeting = _getGreeting(now.hour);
     final dateStr = DateFormat('EEEE, MMM d').format(now);
 
-    final dailySalahItems = SalahData.dailySalah
-        .where((i) => !i.isCounter && shouldShowItem(i.id, timeContext))
-        .toList();
-
-    final zikrItems = SalahData.zikr
-        .where((i) => shouldShowItem(i.id, timeContext))
-        .toList();
-
-    final habitItems = [
-      ...SalahData.habits,
-      ...SalahData.donts,
-      ...SalahData.forgottenSunnah,
-    ].where((i) => shouldShowItem(i.id, timeContext)).toList();
-
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: context.surface,
       body: SafeArea(
-        child: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            // ─── Header ────────────────────────────────
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: groupedTasksAsync.when(
+          data: (groupedTasks) {
+            final allTasks = allTasksAsync.value ?? [];
+            return CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                // ─── Header ────────────────────────────────
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              greeting,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: AppColors.textSecondary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              dateStr,
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textPrimary,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                        // Time context indicator
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceCard,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppColors.glassBorder),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _getTimeIcon(timeContext),
-                                size: 14,
-                                color: AppColors.textSecondary,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                _getTimeName(timeContext),
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.textSecondary,
-                                  fontWeight: FontWeight.w500,
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  greeting,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: context.textSecondary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  dateStr,
+                                  style: TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w700,
+                                    color: context.textPrimary,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            // Time context indicator
+                            _buildTimeContextBadge(context, timeContext),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-            ),
-
-            // ─── Progress Ring ─────────────────────────
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                child: ProgressRing(
-                  percentage: dailyLog.completionPercentage,
-                  completedCount: dailyLog.completedCount,
-                  totalCount: dailyLog.totalItems,
-                  streak: streak,
-                ),
-              ),
-            ),
-
-            // ─── Salah Section ─────────────────────────
-            const SliverToBoxAdapter(
-              child: _SectionHeader(
-                title: 'Salah',
-                icon: Icons.mosque_rounded,
-                color: AppColors.categoryPrayer,
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 0.9,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    if (index >= dailySalahItems.length) return null;
-                    final item = dailySalahItems[index];
-                    return SalahCard(
-                      item: item,
-                      isCompleted: dailyLog.getBool(item.id),
-                      onToggle: () {
-                        ref.read(dailyLogProvider.notifier).toggleItem(item.id);
-                      },
-                    );
-                  },
-                  childCount: dailySalahItems.length,
-                ),
-              ),
-            ),
-
-            // ─── Sunnah Counter ────────────────────────
-            if (shouldShowItem('sunnahMuakkadah', timeContext))
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-                sliver: SliverToBoxAdapter(
-                  child: ZikrCounterCard(
-                    item: SalahData.dailySalah
-                        .firstWhere((i) => i.id == 'sunnahMuakkadah'),
-                    currentValue: dailyLog.sunnahMuakkadah,
-                    onValueChanged: (val) {
-                      ref
-                          .read(dailyLogProvider.notifier)
-                          .setCounter('sunnahMuakkadah', val);
-                    },
                   ),
                 ),
-              ),
 
-            // ─── Zikr Section ──────────────────────────
-            const SliverToBoxAdapter(
-              child: _SectionHeader(
-                title: 'Zikr & Tilawat',
-                icon: Icons.auto_awesome_rounded,
-                color: AppColors.categoryZikr,
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    if (index >= zikrItems.length) return null;
-                    final item = zikrItems[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: ZikrCounterCard(
-                        item: item,
-                        currentValue: dailyLog.getCounter(item.id),
-                        onValueChanged: (val) {
-                          ref
-                              .read(dailyLogProvider.notifier)
-                              .setCounter(item.id, val);
-                        },
+                // ─── Progress Ring ─────────────────────────
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                    child: ProgressRing(
+                      percentage: dailyLog.calculateCompletion(allTasks),
+                      completedCount: dailyLog.getCompletedCount(allTasks),
+                      totalCount: allTasks.length,
+                      streak: streak,
+                    ),
+                  ),
+                ),
+
+                // ─── Dynamic Categories ────────────────────
+                ...groupedTasks.entries.map((entry) {
+                  final category = entry.key;
+                  final tasks = entry.value;
+
+                  return SliverMainAxisGroup(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: _SectionHeader(
+                          title: _getCategoryTitle(category),
+                          icon: _getCategoryIcon(category),
+                          color: _getCategoryColor(category),
+                        ),
                       ),
-                    );
-                  },
-                  childCount: zikrItems.length,
-                ),
-              ),
-            ),
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              if (index >= tasks.length) return null;
+                              return DynamicTaskCard(task: tasks[index]);
+                            },
+                            childCount: tasks.length,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
 
-            // ─── Habits Section ────────────────────────
-            const SliverToBoxAdapter(
-              child: _SectionHeader(
-                title: 'Daily Habits',
-                icon: Icons.task_alt_rounded,
-                color: AppColors.categoryHabit,
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 0.95,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    if (index >= habitItems.length) return null;
-                    final item = habitItems[index];
-                    return HabitCard(
-                      item: item,
-                      isCompleted: dailyLog.getBool(item.id),
-                      onToggle: () {
-                        ref.read(dailyLogProvider.notifier).toggleItem(item.id);
-                      },
-                    );
-                  },
-                  childCount: habitItems.length,
-                ),
-              ),
-            ),
-
-            // ─── Weekly Section ────────────────────────
-            const SliverToBoxAdapter(
-              child: _SectionHeader(
-                title: 'Weekly',
-                icon: Icons.calendar_today_rounded,
-                color: AppColors.categoryWeekly,
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 0.95,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final items = SalahData.weekly;
-                    if (index >= items.length) return null;
-                    final item = items[index];
-                    return HabitCard(
-                      item: item,
-                      isCompleted: dailyLog.getBool(item.id),
-                      onToggle: () {
-                        ref.read(dailyLogProvider.notifier).toggleItem(item.id);
-                      },
-                    );
-                  },
-                  childCount: SalahData.weekly.length,
-                ),
-              ),
-            ),
-
-            // ─── Monthly Section ───────────────────────
-            const SliverToBoxAdapter(
-              child: _SectionHeader(
-                title: 'Monthly / Dhul Hijjah',
-                icon: Icons.calendar_month_rounded,
-                color: AppColors.categoryMonthly,
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 0.95,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final items = SalahData.monthly;
-                    if (index >= items.length) return null;
-                    final item = items[index];
-                    return HabitCard(
-                      item: item,
-                      isCompleted: dailyLog.getBool(item.id),
-                      onToggle: () {
-                        ref.read(dailyLogProvider.notifier).toggleItem(item.id);
-                      },
-                    );
-                  },
-                  childCount: SalahData.monthly.length,
-                ),
-              ),
-            ),
-          ],
+                const SliverToBoxAdapter(child: SizedBox(height: 100)),
+              ],
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, stack) => Center(child: Text('Error: $err')),
         ),
       ),
     );
+  }
+
+  Widget _buildTimeContextBadge(BuildContext context, TimeContext timeContext) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: context.surfaceCard,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: context.glassBorder),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(_getTimeIcon(timeContext), size: 14, color: context.textSecondary),
+          const SizedBox(width: 4),
+          Text(
+            _getTimeName(timeContext),
+            style: TextStyle(
+              fontSize: 11,
+              color: context.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getCategoryTitle(String category) {
+    switch (category) {
+      case 'salah': return 'Salah';
+      case 'sunnah_salah': return 'Sunnah & Nafl';
+      case 'zikr': return 'Zikr & Tilawat';
+      case 'habits': return 'Daily Habits';
+      case 'donts': return 'Things to Avoid';
+      case 'weekly': return 'Weekly Amal';
+      case 'dhul_hijjah': return 'Dhul Hijjah';
+      case 'forgotten_sunnah': return 'Forgotten Sunnah';
+      default: return category.toUpperCase();
+    }
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category) {
+      case 'salah': return Icons.mosque_rounded;
+      case 'zikr': return Icons.waves_rounded;
+      case 'habits': return Icons.task_alt_rounded;
+      default: return Icons.auto_awesome_rounded;
+    }
+  }
+
+  Color _getCategoryColor(String category) {
+    switch (category) {
+      case 'salah': return Colors.blueAccent;
+      case 'zikr': return AppColors.sageGreen;
+      case 'habits': return AppColors.warmAmber;
+      case 'donts': return AppColors.softCoral;
+      default: return AppColors.sageGreen;
+    }
   }
 
   String _getGreeting(int hour) {
@@ -381,10 +247,10 @@ class _SectionHeader extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
+              color: context.textSecondary,
               letterSpacing: 0.5,
             ),
           ),
