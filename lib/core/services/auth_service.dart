@@ -24,7 +24,15 @@ class AuthService {
     );
   }
 
+  Future<void> signInWithGoogle() async {
+    await _supabase.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: 'io.supabase.amaltraker://login-callback',
+    );
+  }
+
   Future<void> signOut() async {
     await _supabase.auth.signOut();
   }
 }
+

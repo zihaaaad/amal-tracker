@@ -62,8 +62,10 @@ class AnalyticsScreen extends ConsumerWidget {
                     try {
                       final month = DateTime.now();
                       final bytes = await PdfGenerator.generateMonthlyReport(month, monthLogs, tasks);
+                      if (!context.mounted) return;
                       await Printing.sharePdf(bytes: bytes, filename: 'amal_report_${month.month}_${month.year}.pdf');
                     } catch (e) {
+                      if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Failed to generate PDF: $e')),
                       );

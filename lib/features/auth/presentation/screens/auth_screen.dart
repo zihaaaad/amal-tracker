@@ -152,6 +152,42 @@ class _AuthScreenState extends State<AuthScreen> {
                   ),
                   
                   const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(child: Divider(color: context.glassBorder)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text('OR', style: TextStyle(color: context.textMuted, fontSize: 12)),
+                      ),
+                      Expanded(child: Divider(color: context.glassBorder)),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: OutlinedButton.icon(
+                      onPressed: () => AuthService.instance.signInWithGoogle(),
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        side: BorderSide(color: context.glassBorder),
+                        backgroundColor: context.surfaceCard,
+                      ),
+                      icon: Image.network(
+                        'https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png',
+                        height: 24,
+                      ),
+                      label: Text(
+                        'Continue with Google',
+                        style: TextStyle(
+                          color: context.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                   TextButton(
                     onPressed: () => setState(() => _isLogin = !_isLogin),
                     child: Text(
@@ -161,6 +197,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       style: TextStyle(color: Theme.of(context).colorScheme.primary),
                     ),
                   ),
+
                 ],
               ),
             ),
