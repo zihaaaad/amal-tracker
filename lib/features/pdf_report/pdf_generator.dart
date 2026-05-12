@@ -70,10 +70,6 @@ class PdfGenerator {
 
     final totalDays = logs.length;
     final totalFajr = logs.where((l) => l.fajr).length;
-    final totalDhuhr = logs.where((l) => l.dhuhr).length;
-    final totalAsr = logs.where((l) => l.asr).length;
-    final totalMaghrib = logs.where((l) => l.maghrib).length;
-    final totalIsha = logs.where((l) => l.isha).length;
 
     final avgCompletion = logs.fold(0.0, (sum, log) => sum + log.completionPercentage) / totalDays;
 

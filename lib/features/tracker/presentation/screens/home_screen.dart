@@ -23,6 +23,20 @@ class HomeScreen extends ConsumerWidget {
     final greeting = _getGreeting(now.hour);
     final dateStr = DateFormat('EEEE, MMM d').format(now);
 
+    final dailySalahItems = SalahData.dailySalah
+        .where((i) => !i.isCounter && shouldShowItem(i.id, timeContext))
+        .toList();
+
+    final zikrItems = SalahData.zikr
+        .where((i) => shouldShowItem(i.id, timeContext))
+        .toList();
+
+    final habitItems = [
+      ...SalahData.habits,
+      ...SalahData.donts,
+      ...SalahData.forgottenSunnah,
+    ].where((i) => shouldShowItem(i.id, timeContext)).toList();
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(
@@ -132,13 +146,8 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
-                    final items = SalahData.dailySalah
-                        .where((i) =>
-                            !i.isCounter &&
-                            shouldShowItem(i.id, timeContext))
-                        .toList();
-                    if (index >= items.length) return null;
-                    final item = items[index];
+                    if (index >= dailySalahItems.length) return null;
+                    final item = dailySalahItems[index];
                     return SalahCard(
                       item: item,
                       isCompleted: dailyLog.getBool(item.id),
@@ -147,11 +156,7 @@ class HomeScreen extends ConsumerWidget {
                       },
                     );
                   },
-                  childCount: SalahData.dailySalah
-                      .where((i) =>
-                          !i.isCounter &&
-                          shouldShowItem(i.id, timeContext))
-                      .length,
+                  childCount: dailySalahItems.length,
                 ),
               ),
             ),
@@ -187,11 +192,8 @@ class HomeScreen extends ConsumerWidget {
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
-                    final items = SalahData.zikr
-                        .where((i) => shouldShowItem(i.id, timeContext))
-                        .toList();
-                    if (index >= items.length) return null;
-                    final item = items[index];
+                    if (index >= zikrItems.length) return null;
+                    final item = zikrItems[index];
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 10),
                       child: ZikrCounterCard(
@@ -205,9 +207,7 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     );
                   },
-                  childCount: SalahData.zikr
-                      .where((i) => shouldShowItem(i.id, timeContext))
-                      .length,
+                  childCount: zikrItems.length,
                 ),
               ),
             ),
@@ -231,13 +231,8 @@ class HomeScreen extends ConsumerWidget {
                 ),
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
-                    final allHabitItems = [
-                      ...SalahData.habits,
-                      ...SalahData.donts,
-                      ...SalahData.forgottenSunnah,
-                    ].where((i) => shouldShowItem(i.id, timeContext)).toList();
-                    if (index >= allHabitItems.length) return null;
-                    final item = allHabitItems[index];
+                    if (index >= habitItems.length) return null;
+                    final item = habitItems[index];
                     return HabitCard(
                       item: item,
                       isCompleted: dailyLog.getBool(item.id),
@@ -246,11 +241,7 @@ class HomeScreen extends ConsumerWidget {
                       },
                     );
                   },
-                  childCount: [
-                    ...SalahData.habits,
-                    ...SalahData.donts,
-                    ...SalahData.forgottenSunnah,
-                  ].where((i) => shouldShowItem(i.id, timeContext)).length,
+                  childCount: habitItems.length,
                 ),
               ),
             ),
