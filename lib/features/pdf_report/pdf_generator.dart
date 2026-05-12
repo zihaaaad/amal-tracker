@@ -3,7 +3,6 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:intl/intl.dart';
 import '../../../core/database/database_service.dart';
-import '../../../core/constants/salah_data.dart';
 
 class PdfGenerator {
   static Future<Uint8List> generateMonthlyReport(

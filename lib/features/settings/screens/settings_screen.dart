@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/constants/app_constants.dart';
-import '../../../../core/database/database_service.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -27,7 +25,7 @@ class SettingsScreen extends ConsumerWidget {
             trailing: Switch(
               value: true,
               onChanged: null, // Always true for now based on requirements
-              activeColor: AppColors.sageGreenLight,
+              activeThumbColor: AppColors.sageGreenLight,
             ),
           ),
           
@@ -44,7 +42,7 @@ class SettingsScreen extends ConsumerWidget {
               onChanged: (val) {
                 // Implementation for toggling permissions goes here
               },
-              activeColor: AppColors.sageGreenLight,
+              activeThumbColor: AppColors.sageGreenLight,
             ),
           ),
           
