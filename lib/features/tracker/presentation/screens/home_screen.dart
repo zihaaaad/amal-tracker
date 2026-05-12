@@ -17,7 +17,8 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  late ConfettiController _confettiController;
+   late ConfettiController _confettiController;
+  bool _hasCelebratedToday = false;
 
   @override
   void initState() {
@@ -31,9 +32,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.dispose();
   }
 
-  void _checkCelebration(double completion) {
-    if (completion >= 1.0 && _confettiController.state != ConfettiControllerState.playing) {
+   void _checkCelebration(double completion) {
+    if (completion >= 1.0 && !_hasCelebratedToday) {
+      _hasCelebratedToday = true;
       _confettiController.play();
+    } else if (completion < 1.0) {
+      _hasCelebratedToday = false;
     }
   }
 

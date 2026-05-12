@@ -6,22 +6,26 @@ final settingsProvider = StateNotifierProvider<SettingsNotifier, SettingsState>(
   return SettingsNotifier();
 });
 
-class SettingsState {
+ class SettingsState {
   final ThemeMode themeMode;
   final bool notificationsEnabled;
+  final bool performanceMode;
 
   SettingsState({
     this.themeMode = ThemeMode.dark,
     this.notificationsEnabled = true,
+    this.performanceMode = false,
   });
 
   SettingsState copyWith({
     ThemeMode? themeMode,
     bool? notificationsEnabled,
+    bool? performanceMode,
   }) {
     return SettingsState(
       themeMode: themeMode ?? this.themeMode,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      performanceMode: performanceMode ?? this.performanceMode,
     );
   }
 }
@@ -31,14 +35,16 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     _loadSettings();
   }
 
-  Future<void> _loadSettings() async {
+   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     final isLight = prefs.getBool('isLightMode') ?? false;
     final notifs = prefs.getBool('notificationsEnabled') ?? true;
+    final perf = prefs.getBool('performanceMode') ?? false;
     
     state = state.copyWith(
       themeMode: isLight ? ThemeMode.light : ThemeMode.dark,
       notificationsEnabled: notifs,
+      performanceMode: perf,
     );
   }
 
@@ -52,5 +58,11 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('notificationsEnabled', enabled);
     state = state.copyWith(notificationsEnabled: enabled);
+  }
+
+  Future<void> togglePerformanceMode(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('performanceMode', enabled);
+    state = state.copyWith(performanceMode: enabled);
   }
 }

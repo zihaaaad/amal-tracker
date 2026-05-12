@@ -1,11 +1,13 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/theme_extension.dart';
+import '../../features/settings/providers/settings_provider.dart';
 
 /// A premium frosted-glass card with subtle border and glow effect.
 /// Optimized with RepaintBoundary and conditional blur for performance.
-class GlassmorphicCard extends StatelessWidget {
+class GlassmorphicCard extends ConsumerWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
   final double borderRadius;
@@ -26,8 +28,9 @@ class GlassmorphicCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = context.isDark;
+    final performanceMode = ref.watch(settingsProvider.select((s) => s.performanceMode));
     
     return RepaintBoundary(
       child: GestureDetector(
@@ -48,6 +51,7 @@ class GlassmorphicCard extends StatelessWidget {
                   : (borderColor ?? context.glassBorder),
               width: 1,
             ),
+            color: performanceMode ? context.surfaceCard : null,
             boxShadow: [
               if (isCompleted)
                 BoxShadow(
@@ -67,11 +71,9 @@ class GlassmorphicCard extends StatelessWidget {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(borderRadius),
             child: BackdropFilter(
-              // Disable blur on extremely low-end or in light mode if not needed for "freshness"
-              // Here we keep it but reduce intensity for a cleaner look
               filter: ImageFilter.blur(
-                sigmaX: isDark ? 10 : 5, 
-                sigmaY: isDark ? 10 : 5,
+                sigmaX: performanceMode ? 0 : (isDark ? 10 : 5), 
+                sigmaY: performanceMode ? 0 : (isDark ? 10 : 5),
               ),
               child: Padding(
                 padding: padding ?? const EdgeInsets.all(16),

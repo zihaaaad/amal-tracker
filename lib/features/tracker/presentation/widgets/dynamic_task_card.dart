@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../../../core/theme/theme_extension.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../shared/widgets/glassmorphic_card.dart';
-import '../../../../shared/widgets/swipe_action.dart';
 import '../../../../shared/widgets/hold_to_fill.dart';
 import '../../data/models/amal_task.dart';
 import '../../providers/daily_log_provider.dart';
@@ -24,11 +24,27 @@ class DynamicTaskCard extends ConsumerWidget {
       final isCompleted = dailyLog.getBool(task.id);
       return Padding(
         padding: const EdgeInsets.only(bottom: 12),
-        child: SwipeAction(
-          isCompleted: isCompleted,
-          onComplete: () => ref.read(dailyLogProvider.notifier).toggleTask(task.id),
+        child: Slidable(
+          key: ValueKey(task.id),
+          enabled: !isCompleted,
+          startActionPane: ActionPane(
+            motion: const DrawerMotion(),
+            extentRatio: 0.3,
+            children: [
+              SlidableAction(
+                onPressed: (context) {
+                  ref.read(dailyLogProvider.notifier).toggleTask(task.id);
+                },
+                backgroundColor: Colors.transparent,
+                foregroundColor: AppColors.sageGreen,
+                icon: Icons.check_circle_rounded,
+                label: 'Done',
+              ),
+            ],
+          ),
           child: GlassmorphicCard(
             padding: const EdgeInsets.all(16),
+            isCompleted: isCompleted,
             child: Row(
               children: [
                 _buildCategoryIcon(task.category, context, isCompleted),

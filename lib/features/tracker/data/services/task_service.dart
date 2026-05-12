@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import '../models/amal_task.dart';
+import '../../../../core/constants/salah_data.dart';
 
 class TaskService {
   TaskService._();
@@ -83,16 +84,38 @@ class TaskService {
   Future<List<AmalTask>> getCachedTasks() async {
     final prefs = await SharedPreferences.getInstance();
     final jsonStr = prefs.getString(_tasksKey);
+    
     if (jsonStr != null) {
       try {
         final List<dynamic> jsonList = json.decode(jsonStr);
         return jsonList.map((j) => AmalTask.fromJson(j)).toList();
       } catch (_) {
-        return [];
+        return _seedFromLocal();
       }
     }
-    return [];
+    
+    // Seed from local if no cache exists (First launch / Offline)
+    return _seedFromLocal();
   }
+
+  Future<List<AmalTask>> _seedFromLocal() async {
+    try {
+      final localItems = SalahData.allItems.map((item) => AmalTask(
+        id: item.id,
+        category: item.category.name,
+        title: item.title,
+        inputType: item.isCounter ? TaskInputType.counter : TaskInputType.checkbox,
+        points: (item.id == 'fajr' || item.id == 'dhuhr' || item.id == 'asr' || item.id == 'maghrib' || item.id == 'isha') ? 5 : 1,
+      )).toList();
+      
+      await _cacheTasks(localItems);
+      return localItems;
+    } catch (e) {
+      debugPrint('Seeding failed: $e');
+      return [];
+    }
+  }
+
 
   // ─── Internal Management Methods ──────────────────
   // Note: These should only be used by the separate Admin App

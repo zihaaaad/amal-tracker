@@ -160,6 +160,8 @@ class DatabaseService {
   /// Save a day's log.
   Future<void> saveLog(DailyLog log) async {
     await _prefs.setString('log_${log.date}', json.encode(log.toJson()));
+    // Invalidate streak cache on save
+    await _prefs.remove('cached_streak');
   }
 
   /// Get logs for a date range (inclusive).
@@ -183,10 +185,23 @@ class DatabaseService {
   }
 
   /// Calculate current streak (consecutive days with >50% completion).
+  /// Optimized with caching to prevent 365 JSON decodes on every UI refresh.
   int calculateStreak(List<AmalTask> tasks) {
     if (tasks.isEmpty) return 0;
+
+    // 1. Check Cache
+    final cached = _prefs.getInt('cached_streak');
+    final lastUpdate = _prefs.getString('last_streak_update');
+    final today = _dateKey(DateTime.now());
+
+    if (cached != null && lastUpdate == today) {
+      return cached;
+    }
+
+    // 2. Heavy Calculation
     int streak = 0;
     var date = DateTime.now();
+    
     // Start from yesterday if today is not complete yet
     final todayLog = getLog(date);
     if (todayLog.calculateCompletion(tasks) < 0.5) {
@@ -194,14 +209,28 @@ class DatabaseService {
     }
 
     for (int i = 0; i < 365; i++) {
-      final log = getLog(date);
-      if (log.calculateCompletion(tasks) >= 0.5) {
-        streak++;
-        date = date.subtract(const Duration(days: 1));
-      } else {
+      final key = _dateKey(date);
+      final jsonStr = _prefs.getString('log_$key');
+      
+      if (jsonStr == null) break;
+
+      try {
+        final log = DailyLog.fromJson(json.decode(jsonStr));
+        if (log.calculateCompletion(tasks) >= 0.5) {
+          streak++;
+          date = date.subtract(const Duration(days: 1));
+        } else {
+          break;
+        }
+      } catch (_) {
         break;
       }
     }
+
+    // 3. Update Cache
+    _prefs.setInt('cached_streak', streak);
+    _prefs.setString('last_streak_update', today);
+
     return streak;
   }
 

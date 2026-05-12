@@ -1,5 +1,8 @@
-import 'package:flutter/material.dart';
+ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'features/settings/providers/settings_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/constants/app_constants.dart';
@@ -13,9 +16,14 @@ import 'features/settings/screens/settings_screen.dart';
 import 'features/auth/presentation/screens/auth_screen.dart';
 import 'features/auth/providers/auth_provider.dart';
 
-void main() async {
+ void main() async {
   // Ensure Flutter bindings are initialized before calling async methods
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Timezones
+  tz.initializeTimeZones();
+  final timeZoneName = await FlutterTimezone.getLocalTimezone();
+  tz.setLocalLocation(tz.getLocation(timeZoneName.toString()));
 
   // Initialize Local Database
   await DatabaseService.initialize();
