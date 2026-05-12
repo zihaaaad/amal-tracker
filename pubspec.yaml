@@ -53,3 +53,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # Fonts are loaded via google_fonts package — no asset declaration needed
+  # google_fonts handles Outfit and Inter font loading automatically

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 
 /// Premium branded splash screen shown during app initialization.
@@ -84,10 +85,9 @@ class _SplashScreenState extends State<SplashScreen>
               const SizedBox(height: 32),
 
               // App name
-              const Text(
+              Text(
                 'Amal Tracker',
-                style: TextStyle(
-                  fontFamily: 'Outfit',
+                style: GoogleFonts.outfit(
                   fontSize: 32,
                   fontWeight: FontWeight.w800,
                   color: AppColors.textPrimary,
