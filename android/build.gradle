@@ -24,7 +24,7 @@ subprojects {
                         namespace = "dev.flutter.${project.name.replace('-', '_')}"
                     }
                 }
-                compileSdkVersion 34
+                compileSdkVersion 36
             }
         }
     }

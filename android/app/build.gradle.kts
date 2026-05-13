@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.amaltracker.amal_tracker"
-    compileSdk = 34
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
