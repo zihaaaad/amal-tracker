@@ -1,5 +1,5 @@
 name: amal_tracker
-description: "Premium Islamic daily practices tracker with offline-first architecture."
+description: "Islamic daily practices tracker — offline-first, lite, and fast."
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -18,9 +18,8 @@ dependencies:
   # Backend & Auth
   supabase_flutter: ^2.9.0
 
-  # Local Database
+  # Local Storage
   shared_preferences: ^2.3.4
-  path_provider: ^2.1.4
 
   # Background & Notifications
   workmanager: ^0.9.0
@@ -30,17 +29,13 @@ dependencies:
   pdf: ^3.11.1
   printing: ^5.13.3
 
-  # UI Enhancements
-  flutter_staggered_grid_view: ^0.7.0
+  # UI
   fl_chart: ^0.69.2
   google_fonts: ^6.2.1
-  flutter_animate: ^4.5.2
 
   # Utilities
   intl: ^0.20.2
-  share_plus: ^10.1.4
   permission_handler: ^11.4.0
-  uuid: ^4.5.1
   confetti: ^0.8.0
   flutter_slidable: ^4.0.3
   timezone: ^0.10.1
@@ -53,5 +48,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  # Fonts are loaded via google_fonts package — no asset declaration needed
-  # google_fonts handles Outfit and Inter font loading automatically

@@ -39,18 +39,6 @@ class SettingsScreen extends ConsumerWidget {
               activeThumbColor: AppColors.sageGreenLight,
             ),
           ),
-          _buildSettingsTile(context,
-            icon: Icons.speed_rounded,
-            title: 'Performance Mode',
-            subtitle: 'Disable blur effects for smoother scrolling on older devices',
-            trailing: Switch(
-              value: settings.performanceMode,
-              onChanged: (val) {
-                ref.read(settingsProvider.notifier).togglePerformanceMode(val);
-              },
-              activeThumbColor: AppColors.sageGreenLight,
-            ),
-          ),
           
           const SizedBox(height: 24),
           

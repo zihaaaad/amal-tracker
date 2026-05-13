@@ -40,15 +40,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _hasCelebratedToday = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        // Premium haptic choreography: cascade → heavy punch
-        // This makes 100% feel like a real achievement, not just a checkmark
-        HapticFeedback.selectionClick();
-        Future.delayed(const Duration(milliseconds: 80), () {
-          HapticFeedback.selectionClick();
-          Future.delayed(const Duration(milliseconds: 80), () {
-            HapticFeedback.heavyImpact();
-          });
-        });
+        HapticFeedback.heavyImpact();
         _confettiController.play();
       });
     } else if (completion < 1.0) {
@@ -86,7 +78,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               data: (groupedTasks) {
                 return SlidableAutoCloseBehavior(
                   child: CustomScrollView(
-                    physics: const BouncingScrollPhysics(),
                     slivers: [
                     // ─── Header ────────────────────────────────
                     SliverToBoxAdapter(

@@ -24,13 +24,11 @@ import 'features/settings/screens/settings_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Portrait lock
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
 
-  // Prevent white flash before Flutter draws
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
@@ -38,23 +36,21 @@ void main() async {
     systemNavigationBarIconBrightness: Brightness.light,
   ));
 
-  // Parallel init: timezone + local DB (no network needed)
+  // Parallel init — timezone + local DB
   await Future.wait([
     _initTimezone(),
     DatabaseService.initialize(),
   ]);
 
-  // Supabase init (network optional — gracefully handles offline)
+  // Supabase init
   await Supabase.initialize(
     url: AppConstants.supabaseUrl,
     anonKey: AppConstants.supabaseAnonKey,
   );
 
-  // Non-critical services in parallel
-  unawaited(Future.wait([
-    NotificationService.initialize(),
-    BackgroundService.initialize(),
-  ]));
+  // Non-critical — fire and forget
+  NotificationService.initialize().catchError((_) {});
+  BackgroundService.initialize().catchError((_) {});
 
   runApp(const ProviderScope(child: AmalTrackerApp()));
 }
@@ -69,12 +65,7 @@ Future<void> _initTimezone() async {
   }
 }
 
-/// Fire-and-forget helper — runs future without awaiting.
-void unawaited(Future<void> future) {
-  future.catchError((_) {}); // Silently ignore errors
-}
-
-// ─── Root App ──────────────────────────────────────────────────────────────
+// ─── Root App ──────────────────────────────────────────
 
 class AmalTrackerApp extends ConsumerWidget {
   const AmalTrackerApp({super.key});
@@ -94,10 +85,8 @@ class AmalTrackerApp extends ConsumerWidget {
   }
 }
 
-// ─── Smart Router ─────────────────────────────────────────────────────────
+// ─── Router ────────────────────────────────────────────
 
-/// Handles the splash → auth/home routing correctly.
-/// Uses a brief minimum splash duration to prevent visual flicker.
 class _AppRouter extends ConsumerStatefulWidget {
   const _AppRouter();
 
@@ -106,41 +95,32 @@ class _AppRouter extends ConsumerStatefulWidget {
 }
 
 class _AppRouterState extends ConsumerState<_AppRouter> {
-  bool _minimumSplashDone = false;
+  bool _ready = false;
 
   @override
   void initState() {
     super.initState();
-    // Minimum 1.5s splash for branding — prevents jarring instant transition
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      if (mounted) setState(() => _minimumSplashDone = true);
+    // Give Supabase one frame to restore cached session, then decide
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _ready = true);
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // Read auth state — this tells us if stream has emitted
-    final authAsync = ref.watch(authStateProvider);
-    // Direct session check — always immediately available from Supabase
+    // Keep watching auth stream so login/logout navigates automatically
+    ref.watch(authStateProvider);
     final session = ref.watch(sessionProvider);
 
-    // Show splash if minimum time not done OR auth stream still loading
-    final isLoading = !_minimumSplashDone || authAsync.isLoading;
+    if (!_ready) return const SplashScreen();
 
-    if (isLoading) {
-      return const SplashScreen();
-    }
-
-    // Auth is determined — route correctly
-    if (session != null) {
-      return const MainNavigationScreen();
-    }
+    if (session != null) return const MainNavigationScreen();
 
     return const AuthScreen();
   }
 }
 
-// ─── Main Navigation ──────────────────────────────────────────────────────
+// ─── Main Navigation ───────────────────────────────────
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});

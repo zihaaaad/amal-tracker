@@ -86,6 +86,10 @@ class AppTheme {
       );
 
   static ThemeData get darkTheme => ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: AppColors.surface,
+        textTheme: AppTypography.textTheme,
 
         // Color scheme
         colorScheme: const ColorScheme.dark(
