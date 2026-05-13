@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.amaltracker.amal_tracker"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 34
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -45,5 +45,6 @@ flutter {
 }
 
 dependencies {
+    implementation("androidx.core:core-ktx:1.13.1")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }
