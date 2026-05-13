@@ -6,9 +6,11 @@ import 'package:confetti/confetti.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/theme_extension.dart';
+import '../../../../core/constants/quotes.dart';
 import '../../../tracker/providers/daily_log_provider.dart';
 import '../widgets/progress_ring.dart';
 import '../../providers/tasks_provider.dart';
+import '../../data/models/amal_task.dart';
 import '../widgets/dynamic_task_card.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -25,7 +27,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+    _confettiController = ConfettiController(duration: const Duration(seconds: 4));
   }
 
   @override
@@ -34,7 +36,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.dispose();
   }
 
-  /// Called after every state change — safe place to trigger side-effects.
   void _checkCelebration(double completion) {
     if (completion >= 1.0 && !_hasCelebratedToday) {
       _hasCelebratedToday = true;
@@ -52,18 +53,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final dailyLog = ref.watch(dailyLogProvider);
     final streak = ref.watch(streakProvider);
-    final timeContext = ref.watch(timeContextProvider);
     final groupedTasksAsync = ref.watch(groupedTasksProvider);
     final allTasksAsync = ref.watch(tasksProvider);
 
     final now = DateTime.now();
     final greeting = _getGreeting(now.hour);
-    final dateStr = DateFormat('EEEE, MMM d').format(now);
+    final dateStr = DateFormat('EEEE, d MMMM').format(now);
+    final quote = AppQuotes.getQuoteOfTheDay();
 
     final allTasks = allTasksAsync.value ?? [];
     final completion = dailyLog.calculateCompletion(allTasks);
-    
-    // React to completion changes cleanly — triggers after each task toggle
+
     ref.listen(dailyLogProvider, (_, next) {
       final tasks = ref.read(tasksProvider).value ?? [];
       _checkCelebration(next.calculateCompletion(tasks));
@@ -78,141 +78,96 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               data: (groupedTasks) {
                 return SlidableAutoCloseBehavior(
                   child: CustomScrollView(
+                    physics: const BouncingScrollPhysics(),
                     slivers: [
-                    // ─── Header ────────────────────────────────
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      greeting,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: context.textSecondary,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      dateStr,
-                                      style: TextStyle(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.w700,
-                                        color: context.textPrimary,
-                                        letterSpacing: -0.5,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                _buildTimeContextBadge(context, timeContext),
-                              ],
-                            ),
-                          ],
+                      // ── Header with Quote ──────────────────────────
+                      SliverToBoxAdapter(
+                        child: _HomeHeader(
+                          greeting: greeting,
+                          dateStr: dateStr,
+                          quote: quote,
+                          hour: now.hour,
                         ),
                       ),
-                    ),
 
-                    // ─── Progress Ring ─────────────────────────
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                        child: ProgressRing(
-                          percentage: completion,
-                          completedCount: dailyLog.getEarnedPoints(allTasks),
-                          totalCount: dailyLog.getTotalPoints(allTasks),
-                          streak: streak,
-                        ),
-                      ),
-                    ),
-
-                    // ─── Dynamic Categories ────────────────────
-                    ...groupedTasks.entries.map((entry) {
-                      final category = entry.key;
-                      final tasks = entry.value;
-
-                      return SliverMainAxisGroup(
-                        slivers: [
-                          SliverToBoxAdapter(
-                            child: _SectionHeader(
-                              title: _getCategoryTitle(category),
-                              icon: _getCategoryIcon(category),
-                              color: _getCategoryColor(category),
-                            ),
+                      // ── Progress Ring ────────────────────────────
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                          child: ProgressRing(
+                            percentage: completion,
+                            completedCount: dailyLog.getEarnedPoints(allTasks),
+                            totalCount: dailyLog.getTotalPoints(allTasks),
+                            streak: streak,
                           ),
-                          SliverPadding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            sliver: SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (context, index) {
-                                  if (index >= tasks.length) return null;
-                                  return DynamicTaskCard(task: tasks[index]);
-                                },
-                                childCount: tasks.length,
+                        ),
+                      ),
+
+                      // ── Task Categories ──────────────────────────
+                      ...groupedTasks.entries.map((entry) {
+                        final category = entry.key;
+                        final tasks = entry.value;
+                        final doneCount = tasks
+                            .where((t) =>
+                                t.inputType == TaskInputType.checkbox
+                                    ? dailyLog.getBool(t.id)
+                                    : dailyLog.getCounter(t.id) >= 5)
+                            .length;
+
+                        return SliverMainAxisGroup(
+                          slivers: [
+                            SliverToBoxAdapter(
+                              child: _SectionHeader(
+                                title: _getCategoryTitle(category),
+                                icon: _getCategoryIcon(category),
+                                color: _getCategoryColor(category),
+                                doneCount: doneCount,
+                                totalCount: tasks.length,
                               ),
                             ),
-                          ),
-                        ],
-                      );
-                    }),
+                            SliverPadding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              sliver: SliverList(
+                                delegate: SliverChildBuilderDelegate(
+                                  (context, index) {
+                                    if (index >= tasks.length) return null;
+                                    return DynamicTaskCard(task: tasks[index]);
+                                  },
+                                  childCount: tasks.length,
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      }),
 
-                      const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                      const SliverToBoxAdapter(child: SizedBox(height: 120)),
                     ],
                   ),
                 );
               },
-              loading: () => Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: 40, height: 40,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text('Loading your Amal...', style: TextStyle(color: context.textMuted, fontSize: 14)),
-                  ],
-                ),
+              loading: () => const Center(
+                child: CircularProgressIndicator(strokeWidth: 2.5),
               ),
-              error: (err, stack) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.cloud_off_rounded, size: 48, color: context.textMuted),
-                      const SizedBox(height: 16),
-                      Text('Could not load tasks', style: TextStyle(color: context.textPrimary, fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 8),
-                      Text('Showing offline data', style: TextStyle(color: context.textMuted, fontSize: 12)),
-                    ],
-                  ),
-                ),
-              ),
+              error: (err, stack) => Center(child: Text('Error: $err')),
             ),
-            
-            // Celebration Layer
+
+            // ── Confetti ─────────────────────────────────────────
             Align(
               alignment: Alignment.topCenter,
               child: ConfettiWidget(
                 confettiController: _confettiController,
                 blastDirectionality: BlastDirectionality.explosive,
+                numberOfParticles: 40,
+                gravity: 0.25,
                 shouldLoop: false,
                 colors: const [
                   AppColors.sageGreen,
+                  AppColors.sageGreenLight,
                   AppColors.warmAmber,
-                  Colors.blueAccent,
-                  Colors.pinkAccent,
+                  AppColors.warmAmberLight,
+                  Color(0xFF6B9BD2),
+                  Colors.white,
                 ],
               ),
             ),
@@ -222,25 +177,167 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildTimeContextBadge(BuildContext context, TimeContext timeContext) {
+  String _getCategoryTitle(String category) {
+    switch (category) {
+      case 'salah': return 'Prayer';
+      case 'sunnah_salah': return 'Sunnah & Nafl';
+      case 'zikr': return 'Remembrance';
+      case 'habits': return 'Productivity';
+      case 'donts': return 'Self Discipline';
+      case 'weekly': return 'Weekly Goals';
+      default: return category;
+    }
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category) {
+      case 'salah': return Icons.mosque_rounded;
+      case 'sunnah_salah': return Icons.auto_awesome_rounded;
+      case 'zikr': return Icons.waves_rounded;
+      case 'habits': return Icons.flash_on_rounded;
+      case 'donts': return Icons.shield_outlined;
+      case 'weekly': return Icons.event_note_rounded;
+      default: return Icons.bookmark_rounded;
+    }
+  }
+
+  Color _getCategoryColor(String category) {
+    switch (category) {
+      case 'salah': return const Color(0xFF6B9BD2);
+      case 'sunnah_salah': return const Color(0xFF9B8FD0);
+      case 'zikr': return AppColors.sageGreen;
+      case 'habits': return AppColors.warmAmber;
+      case 'donts': return AppColors.softCoral;
+      case 'weekly': return const Color(0xFF8A7FA3);
+      default: return AppColors.sageGreen;
+    }
+  }
+
+  String _getGreeting(int hour) {
+    if (hour < 5) return 'Assalamu Alaikum 🌙';
+    if (hour < 12) return 'Salam, Good Morning ☀️';
+    if (hour < 17) return 'Salam, Good Afternoon 🌤️';
+    if (hour < 21) return 'Salam, Good Evening 🌅';
+    return 'Salam, Good Night 🌙';
+  }
+}
+
+// ─── Home Header ─────────────────────────────────────────────────────────────
+
+class _HomeHeader extends StatelessWidget {
+  final String greeting;
+  final String dateStr;
+  final String quote;
+  final int hour;
+
+  const _HomeHeader({
+    required this.greeting,
+    required this.dateStr,
+    required this.quote,
+    required this.hour,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      margin: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: context.surfaceCard,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: context.glassBorder),
+        borderRadius: BorderRadius.circular(28),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: context.isDark
+              ? [const Color(0xFF1E2A1F), const Color(0xFF161C17)]
+              : [const Color(0xFFF0F7F1), const Color(0xFFE8F2E9)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(_getTimeIcon(timeContext), size: 14, color: context.textSecondary),
-          const SizedBox(width: 4),
-          Text(
-            _getTimeName(timeContext),
-            style: TextStyle(
-              fontSize: 11,
-              color: context.textSecondary,
-              fontWeight: FontWeight.w500,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      greeting,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.sageGreenLight,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      dateStr,
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: context.textPrimary,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.sageGreen.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _getTimeIcon(hour),
+                  color: AppColors.sageGreenLight,
+                  size: 24,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: context.surfaceCard.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: context.glassBorder.withValues(alpha: 0.5),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.format_quote_rounded,
+                  color: AppColors.sageGreen.withValues(alpha: 0.3),
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    quote,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: context.textSecondary,
+                      fontWeight: FontWeight.w500,
+                      fontStyle: FontStyle.italic,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -248,103 +345,83 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  String _getCategoryTitle(String category) {
-    switch (category) {
-      case 'salah': return 'Salah';
-      case 'sunnah_salah': return 'Sunnah & Nafl';
-      case 'zikr': return 'Zikr & Tilawat';
-      case 'habits': return 'Daily Habits';
-      case 'donts': return 'Things to Avoid';
-      case 'weekly': return 'Weekly Amal';
-      case 'dhul_hijjah': return 'Dhul Hijjah';
-      case 'forgotten_sunnah': return 'Forgotten Sunnah';
-      default: return category.toUpperCase();
-    }
-  }
-
-  IconData _getCategoryIcon(String category) {
-    switch (category) {
-      case 'salah': return Icons.mosque_rounded;
-      case 'zikr': return Icons.waves_rounded;
-      case 'habits': return Icons.task_alt_rounded;
-      default: return Icons.auto_awesome_rounded;
-    }
-  }
-
-  Color _getCategoryColor(String category) {
-    switch (category) {
-      case 'salah': return Colors.blueAccent;
-      case 'zikr': return AppColors.sageGreen;
-      case 'habits': return AppColors.warmAmber;
-      case 'donts': return AppColors.softCoral;
-      default: return AppColors.sageGreen;
-    }
-  }
-
-  String _getGreeting(int hour) {
-    if (hour < 5) return 'Assalamu Alaikum 🌙';
-    if (hour < 12) return 'Good Morning ☀️';
-    if (hour < 17) return 'Good Afternoon 🌤️';
-    if (hour < 21) return 'Good Evening 🌅';
-    return 'Good Night 🌙';
-  }
-
-  IconData _getTimeIcon(TimeContext ctx) {
-    switch (ctx) {
-      case TimeContext.earlyMorning: return Icons.wb_twilight_rounded;
-      case TimeContext.morning: return Icons.wb_sunny_rounded;
-      case TimeContext.afternoon: return Icons.wb_sunny_outlined;
-      case TimeContext.evening: return Icons.nights_stay_rounded;
-      case TimeContext.night: return Icons.dark_mode_rounded;
-      case TimeContext.lateNight: return Icons.bedtime_rounded;
-    }
-  }
-
-  String _getTimeName(TimeContext ctx) {
-    switch (ctx) {
-      case TimeContext.earlyMorning: return 'Fajr Time';
-      case TimeContext.morning: return 'Morning';
-      case TimeContext.afternoon: return 'Afternoon';
-      case TimeContext.evening: return 'Evening';
-      case TimeContext.night: return 'Night';
-      case TimeContext.lateNight: return 'Late Night';
-    }
+  IconData _getTimeIcon(int hour) {
+    if (hour < 6) return Icons.nights_stay_rounded;
+    if (hour < 12) return Icons.wb_sunny_rounded;
+    if (hour < 17) return Icons.wb_sunny_outlined;
+    if (hour < 21) return Icons.wb_twilight_rounded;
+    return Icons.bedtime_rounded;
   }
 }
+
+// ─── Section Header ───────────────────────────────────────────────────────────
 
 class _SectionHeader extends StatelessWidget {
   final String title;
   final IconData icon;
   final Color color;
+  final int doneCount;
+  final int totalCount;
 
   const _SectionHeader({
     required this.title,
     required this.icon,
     required this.color,
+    required this.doneCount,
+    required this.totalCount,
   });
 
   @override
   Widget build(BuildContext context) {
+    final allDone = doneCount == totalCount && totalCount > 0;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(6),
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: context.textPrimary,
+                letterSpacing: -0.2,
+              ),
             ),
-            child: Icon(icon, size: 14, color: color),
           ),
-          const SizedBox(width: 8),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: context.textSecondary,
-              letterSpacing: 0.5,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: allDone
+                  ? AppColors.sageGreen.withValues(alpha: 0.2)
+                  : context.surfaceOverlay,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: allDone
+                    ? AppColors.sageGreen.withValues(alpha: 0.4)
+                    : context.glassBorder,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (allDone) ...[
+                  const Icon(Icons.check_rounded, size: 12, color: AppColors.sageGreenLight),
+                  const SizedBox(width: 4),
+                ],
+                Text(
+                  '$doneCount/$totalCount',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    color: allDone ? AppColors.sageGreenLight : context.textMuted,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ],
             ),
           ),
         ],

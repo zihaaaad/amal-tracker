@@ -4,8 +4,8 @@ import 'package:flutter/services.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/theme_extension.dart';
 
-/// Hold-to-fill circular counter widget.
-/// User taps and holds to increment the counter with haptic feedback.
+/// Hold-to-fill circular counter widget with enhanced interactivity.
+/// User taps to increment or holds to rapidly increment with haptic feedback.
 class HoldToFill extends StatefulWidget {
   final int currentValue;
   final int maxValue;
@@ -19,7 +19,7 @@ class HoldToFill extends StatefulWidget {
     required this.maxValue,
     required this.color,
     required this.onValueChanged,
-    this.size = 64,
+    this.size = 52, // Slightly more compact
   });
 
   @override
@@ -28,7 +28,6 @@ class HoldToFill extends StatefulWidget {
 
 class _HoldToFillState extends State<HoldToFill>
     with SingleTickerProviderStateMixin {
-  late AnimationController _animController;
   bool _isHolding = false;
   int _displayValue = 0;
 
@@ -36,10 +35,6 @@ class _HoldToFillState extends State<HoldToFill>
   void initState() {
     super.initState();
     _displayValue = widget.currentValue;
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
   }
 
   @override
@@ -50,12 +45,6 @@ class _HoldToFillState extends State<HoldToFill>
     }
   }
 
-  @override
-  void dispose() {
-    _animController.dispose();
-    super.dispose();
-  }
-
   void _startHold() {
     _isHolding = true;
     _tickCounter();
@@ -64,9 +53,14 @@ class _HoldToFillState extends State<HoldToFill>
   void _tickCounter() async {
     if (!_isHolding || !mounted) return;
 
-    await Future.delayed(const Duration(milliseconds: 400));
+    await Future.delayed(const Duration(milliseconds: 250)); // Faster hold response
     if (!_isHolding || !mounted) return;
 
+    _increment();
+    _tickCounter(); // recursive
+  }
+
+  void _increment() {
     setState(() {
       if (_displayValue < widget.maxValue) {
         _displayValue++;
@@ -75,16 +69,12 @@ class _HoldToFillState extends State<HoldToFill>
       }
     });
 
-    // Premium haptics: heavy impact on completion, selection click otherwise
     if (_displayValue == widget.maxValue) {
       HapticFeedback.heavyImpact();
     } else {
       HapticFeedback.selectionClick();
     }
     widget.onValueChanged(_displayValue);
-
-    _animController.forward(from: 0);
-    _tickCounter(); // recursive
   }
 
   void _stopHold() {
@@ -93,84 +83,65 @@ class _HoldToFillState extends State<HoldToFill>
 
   @override
   Widget build(BuildContext context) {
-    final progress = widget.maxValue > 0
-        ? _displayValue / widget.maxValue
-        : 0.0;
+    final progress = widget.maxValue > 0 ? _displayValue / widget.maxValue : 0.0;
     final isComplete = _displayValue >= widget.maxValue;
+    final activeColor = isComplete ? AppColors.sageGreen : widget.color;
 
     return GestureDetector(
       onLongPressStart: (_) => _startHold(),
       onLongPressEnd: (_) => _stopHold(),
-      onTap: () {
-        // Single tap increments by 1
-        setState(() {
-          if (_displayValue < widget.maxValue) {
-            _displayValue++;
-          } else {
-            _displayValue = 0;
-          }
-        });
-        // Premium haptics
-        if (_displayValue == widget.maxValue) {
-          HapticFeedback.heavyImpact();
-        } else {
-          HapticFeedback.selectionClick();
-        }
-        widget.onValueChanged(_displayValue);
-      },
-      child: SizedBox(
+      onTap: _increment,
+      child: Container(
         width: widget.size,
         height: widget.size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: activeColor.withValues(alpha: 0.05),
+        ),
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // Background circle
+            // Background & Progress Arc
             SizedBox(
-              width: widget.size,
-              height: widget.size,
-              child: CircularProgressIndicator(
-                value: 1.0,
-                strokeWidth: 3,
-                color: context.surfaceOverlay,
-                strokeCap: StrokeCap.round,
-              ),
-            ),
-
-            // Progress arc
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOutCubic,
               width: widget.size,
               height: widget.size,
               child: TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0, end: progress),
-                duration: const Duration(milliseconds: 400),
-                curve: Curves.easeOutCubic,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutBack,
                 builder: (context, value, _) {
                   return CustomPaint(
-                    painter: _ArcPainter(
+                    painter: _CounterPainter(
                       progress: value,
-                      color: isComplete
-                          ? AppColors.sageGreen
-                          : widget.color,
-                      strokeWidth: 3,
+                      bgColor: context.glassBorder.withValues(alpha: 0.1),
+                      fgColor: activeColor,
+                      strokeWidth: 3.5,
                     ),
                   );
                 },
               ),
             ),
 
-            // Counter text
-            AnimatedDefaultTextStyle(
+            // Number with AnimatedSwitcher for a "bounce" effect on change
+            AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
-              style: TextStyle(
-                fontSize: widget.size * 0.28,
-                fontWeight: FontWeight.w700,
-                color: isComplete
-                    ? AppColors.sageGreenLight
-                    : context.textPrimary,
+              transitionBuilder: (Widget child, Animation<double> animation) {
+                return ScaleTransition(
+                  scale: animation.drive(Tween(begin: 0.8, end: 1.0)
+                      .chain(CurveTween(curve: Curves.elasticOut))),
+                  child: FadeTransition(opacity: animation, child: child),
+                );
+              },
+              child: Text(
+                '$_displayValue',
+                key: ValueKey(_displayValue),
+                style: TextStyle(
+                  fontSize: widget.size * 0.35,
+                  fontWeight: FontWeight.w800,
+                  color: isComplete ? AppColors.sageGreenLight : context.textPrimary,
+                  fontFamily: 'monospace', // Tabular figures
+                ),
               ),
-              child: Text('$_displayValue'),
             ),
           ],
         ),
@@ -179,40 +150,51 @@ class _HoldToFillState extends State<HoldToFill>
   }
 }
 
-/// Custom painter for the progress arc.
-class _ArcPainter extends CustomPainter {
+class _CounterPainter extends CustomPainter {
   final double progress;
-  final Color color;
+  final Color bgColor;
+  final Color fgColor;
   final double strokeWidth;
 
-  _ArcPainter({
+  _CounterPainter({
     required this.progress,
-    required this.color,
+    required this.bgColor,
+    required this.fgColor,
     required this.strokeWidth,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = (min(size.width, size.height) / 2) - strokeWidth;
+    final radius = (size.width / 2) - strokeWidth;
 
-    final paint = Paint()
-      ..color = color
+    final bgPaint = Paint()
+      ..color = bgColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
 
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -pi / 2,          // start from top
-      2 * pi * progress, // sweep angle
-      false,
-      paint,
-    );
+    canvas.drawCircle(center, radius, bgPaint);
+
+    if (progress > 0) {
+      final fgPaint = Paint()
+        ..color = fgColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..strokeCap = StrokeCap.round;
+
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        -pi / 2,
+        2 * pi * progress,
+        false,
+        fgPaint,
+      );
+    }
   }
 
   @override
-  bool shouldRepaint(covariant _ArcPainter oldDelegate) {
-    return oldDelegate.progress != progress || oldDelegate.color != color;
+  bool shouldRepaint(covariant _CounterPainter oldDelegate) {
+    return oldDelegate.progress != progress || oldDelegate.fgColor != fgColor;
   }
 }
