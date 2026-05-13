@@ -15,6 +15,7 @@ subprojects {
 
 // Fix for old plugins (like isar_flutter_libs) missing a namespace.
 // AGP 8.x requires all library modules to have a namespace.
+// Also fix AAPT: error: resource android:attr/lStar not found by forcing compileSdk to 34.
 // This must run BEFORE evaluationDependsOn to catch modules pre-evaluation.
 subprojects {
     plugins.withId("com.android.library") {
@@ -25,6 +26,7 @@ subprojects {
                     namespace = "dev.flutter.${project.name.replace('-', '_')}"
                 }
             }
+            compileSdk = 34
         }
     }
 }
