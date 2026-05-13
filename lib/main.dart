@@ -41,6 +41,7 @@ void main() async {
   await Future.wait([
     _initTimezone(),
     DatabaseService.initialize(),
+    _prewarmAssets(),
   ]);
 
   await Supabase.initialize(
@@ -56,6 +57,15 @@ void main() async {
   BackgroundService.initialize().catchError((_) {});
 
   runApp(const ProviderScope(child: AmalTrackerApp()));
+}
+
+Future<void> _prewarmAssets() async {
+  // Pre-cache essential fonts to avoid 'invisible text' during load
+  // We don't await this as we want it to run in parallel with other init
+  Future.microtask(() {
+    // These triggers the engine to start warming up the text rendering pipeline
+    TextPainter(textDirection: TextDirection.ltr).layout();
+  });
 }
 
 Future<void> _initTimezone() async {

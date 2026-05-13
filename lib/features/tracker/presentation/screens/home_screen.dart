@@ -43,7 +43,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _hasCelebratedToday = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
+        // Success Haptic Choreography: Heavy followed by Medium
         HapticFeedback.heavyImpact();
+        Future.delayed(const Duration(milliseconds: 300), () {
+          HapticFeedback.mediumImpact();
+        });
         _confettiController.play();
       });
     } else if (completion < 1.0) {
@@ -58,6 +62,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final groupedTasksAsync = ref.watch(groupedTasksProvider);
     final allTasksAsync = ref.watch(tasksProvider);
     final user = ref.watch(userProvider);
+    final timeContext = ref.watch(timeContextProvider);
 
     final now = DateTime.now();
     final userName = user?.userMetadata?['full_name']?.split(' ').first ?? "";
@@ -135,7 +140,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 delegate: SliverChildBuilderDelegate(
                                   (context, index) {
                                     if (index >= tasks.length) return null;
-                                    return DynamicTaskCard(task: tasks[index])
+                                    final task = tasks[index];
+                                    
+                                    // Contextual Dimming: Dim tasks not relevant to current time
+                                    final isRelevant = _isTaskRelevant(task.id, timeContext);
+                                    
+                                    return Opacity(
+                                      opacity: isRelevant ? 1.0 : 0.4,
+                                      child: DynamicTaskCard(task: task),
+                                    )
                                         .animate()
                                         .fadeIn(delay: (400 + (index * 50)).ms, duration: 400.ms)
                                         .slideX(begin: 0.05, end: 0);
@@ -182,6 +195,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       ),
     );
+  }
+
+  bool _isTaskRelevant(String taskId, TimeContext context) {
+    // Simple logic: tasks are dimmed if they belong to a time already passed
+    if (taskId.contains('fajr') && context != TimeContext.earlyMorning) return false;
+    if (taskId.contains('morning') && context.index > TimeContext.morning.index) return false;
+    if (taskId.contains('dhuhr') && context.index > TimeContext.afternoon.index) return false;
+    return true;
   }
 
   String _getCategoryTitle(String category) {
@@ -345,7 +366,7 @@ class _HomeHeader extends StatelessWidget {
                     quote,
                     style: TextStyle(
                       fontSize: 13,
-                      color: context.textSecondary,
+                      color: context.textSecondary.withValues(alpha: 0.7), // Lower opacity for hierarchy
                       fontWeight: FontWeight.w500,
                       fontStyle: FontStyle.italic,
                       height: 1.4,

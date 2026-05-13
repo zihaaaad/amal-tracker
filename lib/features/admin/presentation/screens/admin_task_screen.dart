@@ -8,6 +8,8 @@ import '../../../tracker/data/models/amal_task.dart';
 import '../../../tracker/data/services/task_service.dart';
 import '../../../tracker/providers/tasks_provider.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:uuid/uuid.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:flutter/services.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
@@ -239,7 +241,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
               child: ElevatedButton(
                 onPressed: () async {
                   final newTask = AmalTask(
-                    id: isEdit ? task.id : DateTime.now().millisecondsSinceEpoch.toString(),
+                    id: isEdit ? task.id : const Uuid().v4(),
                     title: titleController.text.trim(),
                     category: categoryController.text.trim(),
                     points: int.tryParse(pointsController.text) ?? 1,
