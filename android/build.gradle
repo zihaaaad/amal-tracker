@@ -13,20 +13,29 @@ subprojects {
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
 
-// Fix for old plugins (like isar_flutter_libs) missing a namespace.
-// AGP 8.x requires all library modules to have a namespace.
-// Also fix AAPT: error: resource android:attr/lStar not found by forcing compileSdk to 34.
-// This must run BEFORE evaluationDependsOn to catch modules pre-evaluation.
+// Force androidx.core to 1.6.0 to avoid AAPT: error: resource android:attr/lStar not found
 subprojects {
-    plugins.withId("com.android.library") {
-        android {
-            if (namespace == null || namespace.isEmpty()) {
-                namespace = project.group?.toString()
-                if (namespace == null || namespace.isEmpty()) {
-                    namespace = "dev.flutter.${project.name.replace('-', '_')}"
-                }
+    project.configurations.all {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == 'androidx.core' && details.requested.name.startsWith('core')) {
+                details.useVersion '1.6.0'
             }
-            compileSdk = 34
+        }
+    }
+}
+
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            project.android {
+                if (namespace == null || namespace.isEmpty()) {
+                    namespace = project.group?.toString()
+                    if (namespace == null || namespace.isEmpty()) {
+                        namespace = "dev.flutter.${project.name.replace('-', '_')}"
+                    }
+                }
+                compileSdkVersion 34
+            }
         }
     }
 }
