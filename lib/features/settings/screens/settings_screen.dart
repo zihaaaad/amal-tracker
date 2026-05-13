@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -18,65 +19,68 @@ class SettingsScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: context.surface,
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: const Text('Preferences'),
         centerTitle: true,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        physics: const BouncingScrollPhysics(),
         children: [
           // Theme Section
-          _buildSectionTitle(context, 'Appearance'),
+          _buildSectionTitle(context, 'APPEARANCE'),
           _buildSettingsTile(context, 
             icon: Icons.dark_mode_rounded,
             title: 'Dark Mode',
-            subtitle: 'Switch between dark and light theme',
+            subtitle: 'Toggle deep night theme',
             trailing: Switch(
               value: settings.themeMode == ThemeMode.dark,
               onChanged: (val) {
-                // val = true means user wants dark mode
+                HapticFeedback.selectionClick();
                 ref.read(settingsProvider.notifier).toggleTheme(!val);
               },
-              activeThumbColor: AppColors.sageGreenLight,
+              activeThumbColor: context.timeTint,
             ),
           ),
           
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           
           // Notifications
-          _buildSectionTitle(context, 'Smart Notifications'),
+          _buildSectionTitle(context, 'COMMUNICATION'),
           _buildSettingsTile(context, 
             icon: Icons.notifications_active_rounded,
-            title: 'Allow Notifications',
-            subtitle: 'Reminders for prayers, sleep, and streaks',
+            title: 'Smart Reminders',
+            subtitle: 'Never miss a spiritual goal',
             trailing: Switch(
-              value: settings.notificationsEnabled, // Typically managed by permissions
+              value: settings.notificationsEnabled,
               onChanged: (val) {
+                HapticFeedback.selectionClick();
                 ref.read(settingsProvider.notifier).toggleNotifications(val);
               },
-              activeThumbColor: AppColors.sageGreenLight,
+              activeThumbColor: context.timeTint,
             ),
           ),
           
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
 
           // Account & Sync
-          _buildSectionTitle(context, 'Account & Sync'),
+          _buildSectionTitle(context, 'ACCOUNT'),
           _buildSettingsTile(context, 
-            icon: Icons.cloud_sync_rounded,
-            title: 'Sync Now',
-            subtitle: 'Backup your data to the cloud',
+            icon: Icons.sync_rounded,
+            title: 'Cloud Backup',
+            subtitle: 'Sync your progress now',
             onTap: () async {
+              HapticFeedback.mediumImpact();
               try {
                 await DatabaseService.instance.syncToCloud();
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Sync completed successfully!')),
+                    const SnackBar(content: Text('Data secured in the cloud.')),
                   );
                 }
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Sync failed: $e'), backgroundColor: Colors.redAccent),
+                    SnackBar(content: Text('Sync error: $e'), backgroundColor: AppColors.softCoral),
                   );
                 }
               }
@@ -84,108 +88,60 @@ class SettingsScreen extends ConsumerWidget {
           ),
           _buildSettingsTile(context, 
             icon: Icons.logout_rounded,
-            title: 'Logout',
-            subtitle: 'Sign out from your account',
+            title: 'Sign Out',
+            subtitle: 'Securely exit your session',
+            iconColor: AppColors.softCoral,
+            titleColor: AppColors.softCoral,
             onTap: () async {
+              HapticFeedback.heavyImpact();
               await AuthService.instance.signOut();
             },
           ),
           
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
 
           // Data Management
-          _buildSectionTitle(context, 'Data Management'),
+          _buildSectionTitle(context, 'STORAGE'),
           _buildSettingsTile(context, 
-            icon: Icons.delete_outline_rounded,
-            title: 'Clear Local Data',
-            subtitle: 'Permanently delete all logs from this device',
-            iconColor: AppColors.softCoral,
-            titleColor: AppColors.softCoral,
+            icon: Icons.delete_sweep_rounded,
+            title: 'Clear Local Cache',
+            subtitle: 'Reset this device data',
             onTap: () {
-              showDialog(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('Clear All Data?'),
-                  content: const Text('This will permanently delete all your tracking history. This cannot be undone.'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: Text('Cancel', style: TextStyle(color: context.textSecondary)),
-                    ),
-                    TextButton(
-                      onPressed: () async {
-                        Navigator.pop(ctx);
-                        await DatabaseService.instance.clearAllData();
-                        ref.read(dailyLogProvider.notifier).refreshToday();
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('All data cleared successfully')),
-                          );
-                        }
-                      },
-                      child: const Text('Delete', style: TextStyle(color: AppColors.softCoral)),
-                    ),
-                  ],
-                ),
-              );
+              HapticFeedback.vibrate();
+              _showDeleteDialog(context, ref);
             },
           ),
           
-          const SizedBox(height: 40),
+          const SizedBox(height: 48),
           
-          // About Section
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: context.surfaceCard,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: context.glassBorder),
-            ),
-            child: Column(
-              children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: AppColors.sageGreen.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.sageGreen.withValues(alpha: 0.3)),
-                  ),
-                  child: const Icon(
-                    Icons.auto_awesome_rounded,
-                    color: AppColors.sageGreenLight,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Amal Tracker',
-                  style: GoogleFonts.outfit(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: context.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Version 1.0.0',
-                  style: TextStyle(color: context.textMuted, fontSize: 12),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Track your daily Amal with sincerity.\nMay Allah accept from us all.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: context.textSecondary,
-                    fontSize: 13,
-                    height: 1.5,
-                  ),
-                ),
-              ],
-            ),
+          // Branded About Section
+          _buildAboutCard(context),
+          const SizedBox(height: 120), // Bottom padding for floating nav
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Wipe Data?', style: GoogleFonts.outfit(fontWeight: FontWeight.w800)),
+        content: const Text('This will permanently delete all tracking history from this device. Cloud data remains safe.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Keep Data', style: TextStyle(color: context.textSecondary)),
           ),
-          const SizedBox(height: 32),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await DatabaseService.instance.clearAllData();
+              ref.read(dailyLogProvider.notifier).refreshToday();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.softCoral, foregroundColor: Colors.white),
+            child: const Text('Delete'),
+          ),
         ],
       ),
     );
@@ -193,14 +149,14 @@ class SettingsScreen extends ConsumerWidget {
 
   Widget _buildSectionTitle(BuildContext context, String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12, left: 4),
+      padding: const EdgeInsets.only(bottom: 12, left: 8),
       child: Text(
         title,
         style: TextStyle(
-          color: context.textSecondary,
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.5,
+          color: context.textMuted,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 2,
         ),
       ),
     );
@@ -219,28 +175,29 @@ class SettingsScreen extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: context.surfaceCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.glassBorder),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: context.glassBorder.withValues(alpha: 0.5)),
       ),
       child: ListTile(
         onTap: onTap,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
         leading: Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: (iconColor ?? AppColors.sageGreen).withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(10),
+            color: (iconColor ?? context.timeTint).withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(14),
           ),
           child: Icon(
             icon,
-            color: iconColor ?? AppColors.sageGreenLight,
-            size: 20,
+            color: iconColor ?? context.timeTint,
+            size: 22,
           ),
         ),
         title: Text(
           title,
           style: TextStyle(
             color: titleColor ?? context.textPrimary,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             fontSize: 15,
           ),
         ),
@@ -249,14 +206,66 @@ class SettingsScreen extends ConsumerWidget {
           style: TextStyle(
             color: context.textMuted,
             fontSize: 12,
+            height: 1.4,
           ),
         ),
         trailing: trailing ?? (onTap != null 
-            ? Icon(Icons.chevron_right_rounded, color: context.textMuted) 
+            ? Icon(Icons.chevron_right_rounded, color: context.textMuted.withValues(alpha: 0.4)) 
             : null),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+      ),
+    );
+  }
+
+  Widget _buildAboutCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            context.timeTint.withValues(alpha: 0.05),
+            context.surfaceCard,
+          ],
         ),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: context.timeTint.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: context.timeTint.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.auto_awesome_rounded, color: context.timeTint, size: 28),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Amal Tracker',
+            style: GoogleFonts.outfit(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: context.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'v1.0.0 Stable',
+            style: TextStyle(color: context.textMuted, fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Built for spiritual focus and daily discipline.\nMay Allah accept our small consistent efforts.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: context.textSecondary,
+              fontSize: 13,
+              height: 1.6,
+            ),
+          ),
+        ],
       ),
     );
   }

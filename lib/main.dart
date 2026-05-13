@@ -11,7 +11,7 @@ import 'core/database/database_service.dart';
 import 'core/services/background_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
-import 'core/theme/app_colors.dart';
+import 'core/theme/theme_extension.dart';
 
 import 'features/settings/providers/settings_provider.dart';
 import 'features/auth/providers/auth_provider.dart';
@@ -32,27 +32,23 @@ void main() async {
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
-    systemNavigationBarColor: AppColors.surface,
+    systemNavigationBarColor: Colors.transparent,
     systemNavigationBarIconBrightness: Brightness.light,
   ));
 
-  // Parallel init: timezone + local DB
   await Future.wait([
     _initTimezone(),
     DatabaseService.initialize(),
   ]);
 
-  // Supabase — handles session restoration, deep links, OAuth callbacks
   await Supabase.initialize(
     url: AppConstants.supabaseUrl,
     anonKey: AppConstants.supabaseAnonKey,
-    // PKCE is the secure default for mobile OAuth — required for Google Sign-In
     authOptions: const FlutterAuthClientOptions(
       authFlowType: AuthFlowType.pkce,
     ),
   );
 
-  // Non-critical services — don't block startup
   NotificationService.initialize().catchError((_) {});
   BackgroundService.initialize().catchError((_) {});
 
@@ -68,8 +64,6 @@ Future<void> _initTimezone() async {
     tz.setLocalLocation(tz.UTC);
   }
 }
-
-// ─── Root App ──────────────────────────────────────────────────
 
 class AmalTrackerApp extends ConsumerWidget {
   const AmalTrackerApp({super.key});
@@ -89,13 +83,6 @@ class AmalTrackerApp extends ConsumerWidget {
   }
 }
 
-// ─── Router ────────────────────────────────────────────────────
-//
-// Responsibilities:
-//   1. Show splash for one frame while Supabase restores the cached session
-//   2. After that, route to AuthScreen or MainNavigationScreen based on session
-//   3. Re-route automatically when auth state changes (login / logout / OAuth return)
-
 class _AppRouter extends ConsumerStatefulWidget {
   const _AppRouter();
 
@@ -109,7 +96,6 @@ class _AppRouterState extends ConsumerState<_AppRouter> {
   @override
   void initState() {
     super.initState();
-    // One frame is enough for Supabase to restore a cached session synchronously
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) setState(() => _ready = true);
     });
@@ -117,33 +103,20 @@ class _AppRouterState extends ConsumerState<_AppRouter> {
 
   @override
   Widget build(BuildContext context) {
-    // Watch the auth stream — causes rebuild on every auth state change:
-    //   - Email/password login → session created
-    //   - Google OAuth return → onAuthStateChange fires
-    //   - Sign out → session destroyed
     final authAsync = ref.watch(authStateProvider);
-
-    // Direct session read — always reflects ground-truth Supabase state
     final session = ref.watch(sessionProvider);
 
-    // Show splash while:
-    //   (a) waiting for first frame (Supabase session restore), OR
-    //   (b) auth stream is still in initial loading state
     if (!_ready || authAsync.isLoading) {
       return const SplashScreen();
     }
 
-    // Session present → go to app
     if (session != null) {
       return const MainNavigationScreen();
     }
 
-    // No session → show login
     return const AuthScreen();
   }
 }
-
-// ─── Main Navigation ───────────────────────────────────────────
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -164,30 +137,128 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true, // Key for floating nav bar
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (i) => setState(() => _currentIndex = i),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Today',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart_rounded),
-            label: 'Analytics',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings_rounded),
-            label: 'Settings',
+      bottomNavigationBar: _FloatingNavBar(
+        currentIndex: _currentIndex,
+        onTap: (i) => setState(() => _currentIndex = i),
+      ),
+    );
+  }
+}
+
+class _FloatingNavBar extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+
+  const _FloatingNavBar({required this.currentIndex, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final activeColor = context.timeTint;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: context.surfaceCard.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: context.glassBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(30),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _NavBarItem(
+              icon: Icons.home_rounded,
+              label: 'Today',
+              isActive: currentIndex == 0,
+              activeColor: activeColor,
+              onTap: () => onTap(0),
+            ),
+            _NavBarItem(
+              icon: Icons.bar_chart_rounded,
+              label: 'Stats',
+              isActive: currentIndex == 1,
+              activeColor: activeColor,
+              onTap: () => onTap(1),
+            ),
+            _NavBarItem(
+              icon: Icons.settings_rounded,
+              label: 'Menu',
+              isActive: currentIndex == 2,
+              activeColor: activeColor,
+              onTap: () => onTap(2),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NavBarItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isActive;
+  final Color activeColor;
+  final VoidCallback onTap;
+
+  const _NavBarItem({
+    required this.icon,
+    required this.label,
+    required this.isActive,
+    required this.activeColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? activeColor.withValues(alpha: 0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: isActive ? activeColor : context.textMuted,
+              size: 24,
+            ),
+            if (isActive) ...[
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  color: activeColor,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

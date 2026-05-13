@@ -11,6 +11,7 @@ import '../../../tracker/providers/daily_log_provider.dart';
 import '../widgets/progress_ring.dart';
 import '../../providers/tasks_provider.dart';
 import '../../data/models/amal_task.dart';
+import '../../../auth/providers/auth_provider.dart';
 import '../widgets/dynamic_task_card.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -55,9 +56,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final streak = ref.watch(streakProvider);
     final groupedTasksAsync = ref.watch(groupedTasksProvider);
     final allTasksAsync = ref.watch(tasksProvider);
+    final user = ref.watch(userProvider);
 
     final now = DateTime.now();
-    final greeting = _getGreeting(now.hour);
+    final userName = user?.userMetadata?['full_name']?.split(' ').first ?? "";
+    final greeting = _getGreeting(now.hour, userName);
     final dateStr = DateFormat('EEEE, d MMMM').format(now);
     final quote = AppQuotes.getQuoteOfTheDay();
 
@@ -213,12 +216,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  String _getGreeting(int hour) {
-    if (hour < 5) return 'Assalamu Alaikum 🌙';
-    if (hour < 12) return 'Salam, Good Morning ☀️';
-    if (hour < 17) return 'Salam, Good Afternoon 🌤️';
-    if (hour < 21) return 'Salam, Good Evening 🌅';
-    return 'Salam, Good Night 🌙';
+  String _getGreeting(int hour, String name) {
+    final suffix = name.isNotEmpty ? ", $name" : "";
+    if (hour < 5) return 'Assalamu Alaikum$suffix 🌙';
+    if (hour < 12) return 'Salam, Good Morning$suffix ☀️';
+    if (hour < 17) return 'Salam, Good Afternoon$suffix 🌤️';
+    if (hour < 21) return 'Salam, Good Evening$suffix 🌅';
+    return 'Salam, Good Night$suffix 🌙';
   }
 }
 
