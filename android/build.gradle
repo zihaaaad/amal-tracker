@@ -13,25 +13,24 @@ subprojects {
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
 
-subprojects {
-    project.evaluationDependsOn(":app")
-}
-
-// Fix for old plugins (like isar_flutter_libs) that don't declare a namespace.
+// Fix for old plugins (like isar_flutter_libs) missing a namespace.
 // AGP 8.x requires all library modules to have a namespace.
+// This must run BEFORE evaluationDependsOn to catch modules pre-evaluation.
 subprojects {
-    afterEvaluate { project ->
-        if (project.hasProperty('android')) {
-            project.android {
+    plugins.withId("com.android.library") {
+        android {
+            if (namespace == null || namespace.isEmpty()) {
+                namespace = project.group?.toString()
                 if (namespace == null || namespace.isEmpty()) {
-                    namespace = project.group.toString()
-                    if (namespace == null || namespace.isEmpty()) {
-                        namespace = "dev.flutter.${project.name.replace('-', '_')}"
-                    }
+                    namespace = "dev.flutter.${project.name.replace('-', '_')}"
                 }
             }
         }
     }
+}
+
+subprojects {
+    project.evaluationDependsOn(":app")
 }
 
 tasks.register("clean", Delete) {
