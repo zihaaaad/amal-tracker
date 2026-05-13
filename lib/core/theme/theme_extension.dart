@@ -15,6 +15,13 @@ extension ThemeContextExtension on BuildContext {
   Color get textOnAccent => isDark ? AppColors.textOnAccent : const Color(0xFFFFFFFF);
   
   Color get glassBorder => isDark ? AppColors.glassBorder : const Color(0x0F000000);
+
+  Color get dynamicGlassBorder {
+    final tint = timeTint;
+    return isDark 
+      ? tint.withValues(alpha: 0.12)
+      : tint.withValues(alpha: 0.08);
+  }
   
   /// Dynamic "Zen" tint based on time of day.
   /// Fajr/Sunrise (4-8 AM): Amber

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthService {
@@ -5,28 +7,49 @@ class AuthService {
   static final instance = AuthService._();
 
   final _supabase = Supabase.instance.client;
+  Map<String, dynamic>? _currentProfile;
 
   User? get currentUser => _supabase.auth.currentUser;
   Session? get currentSession => _supabase.auth.currentSession;
+  Map<String, dynamic>? get currentProfile => _currentProfile;
   Stream<AuthState> get authStateChanges => _supabase.auth.onAuthStateChange;
 
-  /// Checks if the current user has admin privileges.
-  /// Typically stored in user metadata or a separate 'profiles' table.
+  /// Returns true if the user is an authorized admin for As-Sunnah Foundation.
   bool get isAdmin {
+    if (_currentProfile != null) {
+      return _currentProfile!['role'] == 'admin';
+    }
     final user = currentUser;
     if (user == null) return false;
-    // For production, this should check a dedicated 'role' field.
-    // Here we check metadata or email domain for institutional control.
     final metadata = user.userMetadata ?? {};
     return metadata['role'] == 'admin' || user.email?.endsWith('@assunnahfoundation.org') == true;
   }
 
   /// Returns true if the user has completed their institutional onboarding.
   bool get isProfileComplete {
+    if (_currentProfile != null) {
+      return _currentProfile!['is_profile_complete'] == true;
+    }
     final user = currentUser;
     if (user == null) return false;
     final metadata = user.userMetadata ?? {};
     return metadata['is_profile_complete'] == true;
+  }
+
+  /// Fetches the latest profile data from the Supabase 'profiles' table.
+  Future<void> refreshProfile() async {
+    final user = currentUser;
+    if (user == null) return;
+    try {
+      final response = await _supabase
+          .from('profiles')
+          .select()
+          .eq('id', user.id)
+          .single();
+      _currentProfile = response;
+    } catch (e) {
+      debugPrint('Error refreshing profile: $e');
+    }
   }
 
   /// Updates user profile metadata in Supabase.
@@ -41,14 +64,23 @@ class AuthService {
       UserAttributes(
         data: {
           'full_name': name,
-          'phone': phone,
-          'department': department,
-          'employee_id': employeeId,
-          'sub_institute': subInstitute,
           'is_profile_complete': true,
         },
       ),
     );
+
+    // Also update the public profiles table
+    await _supabase.from('profiles').update({
+      'full_name': name,
+      'phone': phone,
+      'department': department,
+      'employee_id': employeeId,
+      'sub_institute': subInstitute,
+      'is_profile_complete': true,
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('id', currentUser!.id);
+
+    await refreshProfile();
   }
 
   Future<AuthResponse> signIn({required String email, required String password}) async {

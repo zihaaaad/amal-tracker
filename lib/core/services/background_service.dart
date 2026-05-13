@@ -22,50 +22,7 @@ void callbackDispatcher() {
       final now = DateTime.now();
       final todayLog = db.getTodayLog();
 
-      // ── Rule 1: Morning Motivation (5:30 AM) ──────
-      if (now.hour == AppConstants.morningMotivationHour &&
-          now.minute <= 30) {
-        await _showNotification(
-          notificationsPlugin,
-          id: 1,
-          title: 'Bismillah! 🌅',
-          body: 'Start your day with Fajr. A new day of blessings awaits.',
-        );
-      }
-
       final tasks = await TaskService.instance.getCachedTasks();
-
-      // ── Rule 2: Evening Incomplete Alert (8 PM) ───
-      if (now.hour == AppConstants.eveningCheckHour) {
-        final pct = todayLog.calculateCompletion(tasks);
-        if (pct < 0.5) {
-          final streak = db.calculateStreak(tasks);
-          final streakMsg = streak > 0
-              ? 'You have a $streak-day streak! Don\'t break it.'
-              : 'Start building your streak today.';
-          await _showNotification(
-            notificationsPlugin,
-            id: 2,
-            title: 'Amal Reminder 📋',
-            body:
-                'You\'ve completed ${(pct * 100).round()}% today. $streakMsg',
-          );
-        }
-      }
-
-      // ── Rule 3: Sleep Reminder (10:00 PM) ─────────
-      if (now.hour == AppConstants.sleepReminderHour &&
-          now.minute <= AppConstants.sleepReminderMinute + 15) {
-        if (!todayLog.getBool('sleptBefore1030')) {
-          await _showNotification(
-            notificationsPlugin,
-            id: 3,
-            title: 'Time to wind down 🌙',
-            body:
-                'Sleep before 10:30 PM for the Sunnah. Put your devices away.',
-          );
-        }
-      }
 
       // ── Rule 4: Friday Reminder (12 PM Friday) ────
       if (now.weekday == DateTime.friday && now.hour == 12) {

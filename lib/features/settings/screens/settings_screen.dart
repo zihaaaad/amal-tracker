@@ -9,6 +9,7 @@ import '../../tracker/providers/daily_log_provider.dart';
 import '../providers/settings_provider.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../admin/presentation/screens/admin_task_screen.dart';
+import 'package:local_auth/local_auth.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -72,12 +73,37 @@ class SettingsScreen extends ConsumerWidget {
               icon: Icons.admin_panel_settings_rounded,
               title: 'Admin Dashboard',
               subtitle: 'Manage Foundation tasks & employees',
-              onTap: () {
+              onTap: () async {
                 HapticFeedback.mediumImpact();
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
-                );
+                final auth = LocalAuthentication();
+                try {
+                  final canAuth = await auth.canCheckBiometrics || await auth.isDeviceSupported();
+                  if (canAuth) {
+                    final didAuth = await auth.authenticate(
+                      localizedReason: 'Authenticate to access Foundation Management',
+                      options: const AuthenticationOptions(stickyAuth: true, biometricOnly: false),
+                    );
+                    if (didAuth && context.mounted) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
+                      );
+                    }
+                  } else if (context.mounted) {
+                    // Fallback if no biometrics
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
+                    );
+                  }
+                } catch (_) {
+                  if (context.mounted) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
+                    );
+                  }
+                }
               },
             ),
             const SizedBox(height: 24),
