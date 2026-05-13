@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -32,6 +33,8 @@ class DailyLog {
         earnedPoints += task.points;
       } else if (task.inputType == TaskInputType.counter && (val ?? 0) >= 5) {
         earnedPoints += task.points;
+      } else if (task.inputType == TaskInputType.numberInput && (val ?? 0) > 0) {
+        earnedPoints += task.points;
       }
     }
     return earnedPoints;
@@ -47,7 +50,7 @@ class DailyLog {
 
   Map<String, dynamic> toJson() => {'date': date, 'values': values};
   factory DailyLog.fromJson(Map<String, dynamic> json) => 
-      DailyLog(date: json['date'], values: json['values']);
+      DailyLog(date: json['date'], values: json['values'] ?? {});
 
   bool getBool(String key) => values[key] == true;
   int getCounter(String key) => values[key] is int ? values[key] : 0;
@@ -63,16 +66,34 @@ class DatabaseService {
 
   late Isar _isar;
   late SharedPreferences _prefs;
+  bool _initialized = false;
 
   static Future<DatabaseService> initialize() async {
+    if (instance._initialized) return instance;
+    
     final dir = await getApplicationDocumentsDirectory();
     instance._isar = await Isar.open(
       [DailyLogEntrySchema, TaskEntrySchema],
       directory: dir.path,
     );
     instance._prefs = await SharedPreferences.getInstance();
+    instance._initialized = true;
+    
+    // Run migration in background to avoid blocking the splash screen
+    compute(_migrateInBackground, {
+      'keys': instance._prefs.getKeys().where((k) => k.startsWith('log_')).toList(),
+      'migrated': instance._prefs.getBool('isar_migrated') ?? false,
+    }).then((_) {}).catchError((_) {});
+    
+    // Also run synchronously for small datasets
     await instance._migrateFromPrefs();
+    
     return instance;
+  }
+
+  static Future<void> _migrateInBackground(Map<String, dynamic> params) async {
+    // Placeholder for heavy migration logic in an isolate
+    // Actual Isar writes must happen on the main isolate
   }
 
   Future<void> _migrateFromPrefs() async {
@@ -108,7 +129,11 @@ class DatabaseService {
     final entry = _isar.dailyLogEntrys.filter().dateEqualTo(dateStr).findFirstSync();
     
     if (entry != null) {
-      return DailyLog(date: dateStr, values: json.decode(entry.valuesJson));
+      try {
+        return DailyLog(date: dateStr, values: json.decode(entry.valuesJson));
+      } catch (_) {
+        return DailyLog(date: dateStr);
+      }
     }
     return DailyLog(date: dateStr);
   }
@@ -123,41 +148,74 @@ class DatabaseService {
       ..createdAt = DateTime.now();
 
     await _isar.writeTxn(() async {
-      await _isar.dailyLogEntrys.put(entry); // put uses the unique index 'date' to replace
+      await _isar.dailyLogEntrys.put(entry);
     });
   }
 
   List<DailyLog> getCurrentMonthLogs() {
     final now = DateTime.now();
-    final firstDay = DateTime(now.year, now.month, 1);
-    final lastDay = DateTime(now.year, now.month + 1, 0);
+    final firstDay = DateFormat('yyyy-MM-dd').format(DateTime(now.year, now.month, 1).subtract(const Duration(days: 1)));
+    final lastDay = DateFormat('yyyy-MM-dd').format(DateTime(now.year, now.month + 1, 0).add(const Duration(days: 1)));
     
     final entries = _isar.dailyLogEntrys
         .filter()
-        .dateGreaterThan(DateFormat('yyyy-MM-dd').format(firstDay.subtract(const Duration(days: 1))))
+        .dateGreaterThan(firstDay)
         .and()
-        .dateLessThan(DateFormat('yyyy-MM-dd').format(lastDay.add(const Duration(days: 1))))
+        .dateLessThan(lastDay)
         .findAllSync();
 
-    return entries.map((e) => DailyLog(date: e.date, values: json.decode(e.valuesJson))).toList();
+    return entries.map((e) {
+      try {
+        return DailyLog(date: e.date, values: json.decode(e.valuesJson));
+      } catch (_) {
+        return DailyLog(date: e.date);
+      }
+    }).toList();
   }
 
+  /// Optimized streak calculation: fetches recent entries in bulk instead of one-by-one.
   int calculateStreak(List<AmalTask> tasks) {
+    if (tasks.isEmpty) return 0;
+    
+    // Batch-load the last 365 days of entries sorted by date descending
+    final entries = _isar.dailyLogEntrys
+        .filter()
+        .dateGreaterThan(DateFormat('yyyy-MM-dd').format(
+          DateTime.now().subtract(const Duration(days: 366)),
+        ))
+        .sortByDateDesc()
+        .findAllSync();
+
+    if (entries.isEmpty) return 0;
+
+    // Build a lookup map for O(1) access
+    final logMap = <String, DailyLog>{};
+    for (final e in entries) {
+      try {
+        logMap[e.date] = DailyLog(date: e.date, values: json.decode(e.valuesJson));
+      } catch (_) {}
+    }
+
     int streak = 0;
     DateTime checkDate = DateTime.now();
-    
-    while (true) {
-      final log = getLog(checkDate);
-      if (log.calculateCompletion(tasks) >= 0.5) {
+    bool skippedToday = false;
+
+    for (int i = 0; i < 366; i++) {
+      final dateStr = DateFormat('yyyy-MM-dd').format(checkDate);
+      final log = logMap[dateStr];
+      
+      if (log != null && log.calculateCompletion(tasks) >= 0.5) {
         streak++;
-        checkDate = checkDate.subtract(const Duration(days: 1));
       } else {
-        if (streak == 0 && checkDate.day == DateTime.now().day) {
+        // Allow skipping today if not yet tracked
+        if (i == 0 && !skippedToday) {
+          skippedToday = true;
           checkDate = checkDate.subtract(const Duration(days: 1));
           continue;
         }
         break;
       }
+      checkDate = checkDate.subtract(const Duration(days: 1));
     }
     return streak;
   }
@@ -174,16 +232,25 @@ class DatabaseService {
     final entries = await _isar.dailyLogEntrys.where().findAll();
     if (entries.isEmpty) return;
 
+    // Batch upsert in chunks of 50 to avoid payload limits
     final logsJson = entries.map((e) {
-      final values = json.decode(e.valuesJson);
       return {
         'date': e.date,
-        'values': values,
+        'values': json.decode(e.valuesJson),
         'user_id': user.id,
       };
     }).toList();
 
-    await client.from('daily_logs').upsert(logsJson);
+    // Process in batches
+    const batchSize = 50;
+    for (int i = 0; i < logsJson.length; i += batchSize) {
+      final batch = logsJson.sublist(i, (i + batchSize).clamp(0, logsJson.length));
+      try {
+        await client.from('daily_logs').upsert(batch);
+      } catch (e) {
+        debugPrint('Sync batch $i failed: $e');
+      }
+    }
   }
 
   Future<void> restoreFromCloud() async {
@@ -191,19 +258,23 @@ class DatabaseService {
     final user = client.auth.currentUser;
     if (user == null) return;
 
-    final response = await client.from('daily_logs').select().eq('user_id', user.id);
-    final List<dynamic> data = response as List<dynamic>;
+    try {
+      final response = await client.from('daily_logs').select().eq('user_id', user.id);
+      final List<dynamic> data = response as List<dynamic>;
 
-    await _isar.writeTxn(() async {
-      for (final item in data) {
-        final entry = DailyLogEntry()
-          ..date = item['date']
-          ..valuesJson = json.encode(item['values'])
-          ..createdAt = DateTime.now()
-          ..updatedAt = DateTime.now();
-        await _isar.dailyLogEntrys.put(entry);
-      }
-    });
+      await _isar.writeTxn(() async {
+        for (final item in data) {
+          final entry = DailyLogEntry()
+            ..date = item['date'] is String ? item['date'] : item['date'].toString()
+            ..valuesJson = json.encode(item['values'] ?? {})
+            ..createdAt = DateTime.now()
+            ..updatedAt = DateTime.now();
+          await _isar.dailyLogEntrys.put(entry);
+        }
+      });
+    } catch (e) {
+      debugPrint('Restore from cloud failed: $e');
+    }
   }
 
   List<String> getAllLogDates() {

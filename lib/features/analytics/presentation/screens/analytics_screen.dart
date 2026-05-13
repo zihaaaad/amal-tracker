@@ -100,6 +100,11 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             ],
           ),
 
+          const SizedBox(height: 16),
+
+          // ── Weekly Trend Comparison ─────────────────────────────
+          _buildWeeklyTrend(context, tasks),
+
           const SizedBox(height: 28),
 
           // ── Monthly Chart ───────────────────────────────────────
@@ -456,7 +461,67 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
       ),
     );
   }
+
+  Widget _buildWeeklyTrend(BuildContext context, List<AmalTask> tasks) {
+    final db = DatabaseService.instance;
+    final now = DateTime.now();
+    final thisWeekStart = now.subtract(Duration(days: now.weekday - 1));
+    double thisWeekTotal = 0;
+    int thisWeekDays = 0;
+    for (int i = 0; i <= now.weekday - 1; i++) {
+      final log = db.getLog(thisWeekStart.add(Duration(days: i)));
+      final comp = log.calculateCompletion(tasks);
+      if (comp > 0) { thisWeekTotal += comp; thisWeekDays++; }
+    }
+    final thisWeekAvg = thisWeekDays > 0 ? thisWeekTotal / thisWeekDays : 0.0;
+    final lastWeekStart = thisWeekStart.subtract(const Duration(days: 7));
+    double lastWeekTotal = 0;
+    int lastWeekDays = 0;
+    for (int i = 0; i < 7; i++) {
+      final log = db.getLog(lastWeekStart.add(Duration(days: i)));
+      final comp = log.calculateCompletion(tasks);
+      if (comp > 0) { lastWeekTotal += comp; lastWeekDays++; }
+    }
+    final lastWeekAvg = lastWeekDays > 0 ? lastWeekTotal / lastWeekDays : 0.0;
+    final diff = ((thisWeekAvg - lastWeekAvg) * 100).round();
+    final isUp = diff >= 0;
+    if (thisWeekDays == 0 && lastWeekDays == 0) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.surfaceCard,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: (isUp ? AppColors.sageGreen : AppColors.softCoral).withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: (isUp ? AppColors.sageGreen : AppColors.softCoral).withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(isUp ? Icons.trending_up_rounded : Icons.trending_down_rounded, color: isUp ? AppColors.sageGreen : AppColors.softCoral, size: 22),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Weekly Progress', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: context.textPrimary)),
+              const SizedBox(height: 2),
+              Text(lastWeekDays > 0 ? 'vs last week' : 'first week tracking!', style: TextStyle(fontSize: 12, color: context.textMuted)),
+            ]),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(color: (isUp ? AppColors.sageGreen : AppColors.softCoral).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+            child: Text('${isUp ? "+" : ""}$diff%', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: isUp ? AppColors.sageGreen : AppColors.softCoral)),
+          ),
+        ],
+      ),
+    );
+  }
 }
+
 
 // ─── Stat Card ─────────────────────────────────────────────────────────────
 

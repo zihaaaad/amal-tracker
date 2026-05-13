@@ -26,10 +26,6 @@ import 'features/settings/screens/settings_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Performance Optimization: Shader Warmup / Pre-caching
-  // Ensures smooth first-frame transitions for glassmorphism
-  _prewarmUI();
-
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -44,7 +40,7 @@ void main() async {
 
   await Future.wait([
     _initTimezone(),
-    DatabaseService.initialize(), // Now uses Isar
+    DatabaseService.initialize(),
   ]);
 
   await Supabase.initialize(
@@ -55,19 +51,11 @@ void main() async {
     ),
   );
 
-  // Initialize Services
+  // Initialize background services non-blocking
   NotificationService.initialize().catchError((_) {});
   BackgroundService.initialize().catchError((_) {});
 
   runApp(const ProviderScope(child: AmalTrackerApp()));
-}
-
-void _prewarmUI() {
-  // Logic to prevent "first-frame stutter" by warming up complex shaders
-  // or pre-caching institutional assets.
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    // Subtle pre-loading of heavy components
-  });
 }
 
 Future<void> _initTimezone() async {
@@ -108,6 +96,7 @@ class _AppRouter extends ConsumerStatefulWidget {
 class _AppRouterState extends ConsumerState<_AppRouter> {
   bool _ready = false;
   bool _checkingProfile = false;
+  bool _profileChecked = false;
 
   @override
   void initState() {
@@ -118,10 +107,14 @@ class _AppRouterState extends ConsumerState<_AppRouter> {
   }
 
   Future<void> _checkProfile() async {
-    if (_checkingProfile) return;
-    setState(() => _checkingProfile = true);
+    if (_checkingProfile || _profileChecked) return;
+    _checkingProfile = true;
+    if (mounted) setState(() {});
+    
     await AuthService.instance.refreshProfile();
-    if (mounted) setState(() => _checkingProfile = false);
+    _checkingProfile = false;
+    _profileChecked = true;
+    if (mounted) setState(() {});
   }
 
   @override
@@ -129,20 +122,30 @@ class _AppRouterState extends ConsumerState<_AppRouter> {
     final authAsync = ref.watch(authStateProvider);
     final session = ref.watch(sessionProvider);
 
-    if (!_ready || authAsync.isLoading || _checkingProfile) {
+    if (!_ready || authAsync.isLoading) {
       return const SplashScreen();
     }
 
     if (session != null) {
+      // Check profile on first login
+      if (!_profileChecked && !_checkingProfile) {
+        _checkProfile();
+        return const SplashScreen();
+      }
+      
+      if (_checkingProfile) {
+        return const SplashScreen();
+      }
+
       if (!AuthService.instance.isProfileComplete) {
-        // Trigger background refresh if we haven't checked yet
-        if (AuthService.instance.currentProfile == null) {
-          _checkProfile();
-          return const SplashScreen();
-        }
         return const OnboardingScreen();
       }
       return const MainNavigationScreen();
+    }
+
+    // Reset profile check state when logged out
+    if (_profileChecked) {
+      _profileChecked = false;
     }
 
     return const AuthScreen();
@@ -169,9 +172,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 350),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
+        child: KeyedSubtree(
+          key: ValueKey(_currentIndex),
+          child: _screens[_currentIndex],
+        ),
       ),
       bottomNavigationBar: _FloatingNavBar(
         currentIndex: _currentIndex,

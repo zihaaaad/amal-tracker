@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 
 class EmployeeProfile {
   final String id;
@@ -21,16 +22,16 @@ class EmployeeProfile {
     required this.role,
   });
 
-  factory EmployeeProfile.fromMetadata(Map<String, dynamic> metadata, String id, String email) {
+  factory EmployeeProfile.fromJson(Map<String, dynamic> json) {
     return EmployeeProfile(
-      id: id,
-      fullName: metadata['full_name'] ?? 'Unknown',
-      email: email,
-      phone: metadata['phone'] ?? '',
-      department: metadata['department'] ?? '',
-      employeeId: metadata['employee_id'] ?? '',
-      subInstitute: metadata['sub_institute'] ?? '',
-      role: metadata['role'] ?? 'employee',
+      id: json['id'] ?? '',
+      fullName: json['full_name'] ?? 'Unknown',
+      email: json['email'] ?? '',
+      phone: json['phone'] ?? '',
+      department: json['department'] ?? 'Unassigned',
+      employeeId: json['employee_id'] ?? '',
+      subInstitute: json['sub_institute'] ?? '',
+      role: json['role'] ?? 'employee',
     );
   }
 }
@@ -40,31 +41,31 @@ class ProfileService {
   static final instance = ProfileService._();
   final _supabase = Supabase.instance.client;
 
-  /// Fetches all employees. In production, this would query a 'profiles' table.
-  /// For this institutional app, we query the 'profiles' view or table.
+  /// Fetches all employees from the institutional profiles table.
   Future<List<EmployeeProfile>> getAllEmployees() async {
-    // Note: This requires a 'profiles' table in Supabase that admins can read.
-    final response = await _supabase.from('profiles').select();
-    final List<dynamic> data = response as List<dynamic>;
-    
-    return data.map((json) => EmployeeProfile(
-      id: json['id'],
-      fullName: json['full_name'],
-      email: json['email'],
-      phone: json['phone'],
-      department: json['department'],
-      employeeId: json['employee_id'],
-      subInstitute: json['sub_institute'],
-      role: json['role'] ?? 'employee',
-    )).toList();
+    try {
+      final response = await _supabase.from('profiles').select();
+      final List<dynamic> data = response as List<dynamic>;
+      return data.map((json) => EmployeeProfile.fromJson(json)).toList();
+    } catch (e) {
+      debugPrint('Failed to fetch employees: $e');
+      return [];
+    }
   }
 
   Future<void> updateEmployeeRole(String userId, String role) async {
-    await _supabase.from('profiles').update({'role': role}).eq('id', userId);
+    try {
+      await _supabase.from('profiles').update({'role': role}).eq('id', userId);
+    } catch (e) {
+      debugPrint('Failed to update role: $e');
+    }
   }
 
   Future<void> deleteEmployee(String userId) async {
-    // Soft delete or remove from profiles
-    await _supabase.from('profiles').delete().eq('id', userId);
+    try {
+      await _supabase.from('profiles').delete().eq('id', userId);
+    } catch (e) {
+      debugPrint('Failed to delete employee: $e');
+    }
   }
 }

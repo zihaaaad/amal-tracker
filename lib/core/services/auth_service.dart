@@ -37,6 +37,7 @@ class AuthService {
   }
 
   /// Fetches the latest profile data from the Supabase 'profiles' table.
+  /// Falls back gracefully if the profiles table doesn't exist yet.
   Future<void> refreshProfile() async {
     final user = currentUser;
     if (user == null) return;
@@ -45,14 +46,21 @@ class AuthService {
           .from('profiles')
           .select()
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
       _currentProfile = response;
     } catch (e) {
-      debugPrint('Error refreshing profile: $e');
+      debugPrint('Profile refresh: $e');
+      // If profiles table doesn't exist yet, use auth metadata as fallback
+      _currentProfile = null;
     }
   }
 
-  /// Updates user profile metadata in Supabase.
+  /// Clears cached profile data on sign out.
+  void clearProfile() {
+    _currentProfile = null;
+  }
+
+  /// Updates user profile metadata in both Auth and profiles table.
   Future<void> updateProfile({
     required String name,
     required String phone,
@@ -60,6 +68,7 @@ class AuthService {
     required String employeeId,
     required String subInstitute,
   }) async {
+    // Update auth metadata
     await _supabase.auth.updateUser(
       UserAttributes(
         data: {
@@ -69,25 +78,34 @@ class AuthService {
       ),
     );
 
-    // Also update the public profiles table
-    await _supabase.from('profiles').update({
-      'full_name': name,
-      'phone': phone,
-      'department': department,
-      'employee_id': employeeId,
-      'sub_institute': subInstitute,
-      'is_profile_complete': true,
-      'updated_at': DateTime.now().toIso8601String(),
-    }).eq('id', currentUser!.id);
+    // Update the public profiles table
+    try {
+      await _supabase.from('profiles').upsert({
+        'id': currentUser!.id,
+        'email': currentUser!.email ?? '',
+        'full_name': name,
+        'phone': phone,
+        'department': department,
+        'employee_id': employeeId,
+        'sub_institute': subInstitute,
+        'is_profile_complete': true,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Profile table update failed: $e');
+    }
 
     await refreshProfile();
   }
 
   Future<AuthResponse> signIn({required String email, required String password}) async {
-    return await _supabase.auth.signInWithPassword(
+    final response = await _supabase.auth.signInWithPassword(
       email: email,
       password: password,
     );
+    // Refresh profile after login
+    await refreshProfile();
+    return response;
   }
 
   Future<AuthResponse> signUp({required String email, required String password}) async {
@@ -107,7 +125,7 @@ class AuthService {
   }
 
   Future<void> signOut() async {
+    clearProfile();
     await _supabase.auth.signOut();
   }
 }
-
