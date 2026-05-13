@@ -134,6 +134,11 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
           // ── Best & Worst Days ───────────────────────────────────
           _buildDayBreakdown(context, pastLogs, tasks),
 
+          const SizedBox(height: 12),
+
+          // ── Spiritual Insights (Wisdom over Data) ───────────────
+          _buildSpiritualInsights(context, pastLogs, tasks),
+
           const SizedBox(height: 28),
 
           // ── Export Button ───────────────────────────────────────
@@ -143,7 +148,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             child: ElevatedButton.icon(
               onPressed: () async {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Generating PDF...')),
+                  const SnackBar(
+                    content: Text('Generating professional report...'),
+                    duration: Duration(seconds: 1),
+                  ),
                 );
                 try {
                   final month = DateTime.now();
@@ -154,6 +162,15 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                     bytes: bytes,
                     filename: 'amal_${month.month}_${month.year}.pdf',
                   );
+                  
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Report ready! Save it to your files or share it.'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
                 } catch (e) {
                   if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -360,6 +377,83 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildSpiritualInsights(
+      BuildContext context, List<DailyLog> logs, List<AmalTask> tasks) {
+    if (logs.isEmpty) return const SizedBox.shrink();
+
+    String insightTitle = "Steady Progress";
+    String insightText =
+        "Your consistency is forming a beautiful pattern. Keep going!";
+    IconData insightIcon = Icons.auto_awesome_rounded;
+
+    final fajrTask =
+        tasks.where((t) => t.title.toLowerCase().contains('fajr')).firstOrNull;
+    if (fajrTask != null) {
+      final totalDays = logs.length;
+      final fajrLogs = logs.where((l) => l.getBool(fajrTask.id)).length;
+      final fajrRatio = fajrLogs / totalDays;
+      if (fajrRatio > 0.8) {
+        insightTitle = "Early Riser Excellence";
+        insightText =
+            "Your Fajr consistency is elite. This morning discipline is the foundation of a successful day.";
+        insightIcon = Icons.wb_twilight_rounded;
+      } else if (fajrRatio < 0.4 && totalDays > 3) {
+        insightTitle = "Morning Opportunity";
+        insightText =
+            "Try focusing on Fajr this week. A strong start at dawn often doubles your productivity.";
+        insightIcon = Icons.wb_sunny_rounded;
+      }
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: context.timeTint.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: context.timeTint.withValues(alpha: 0.15)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: context.timeTint.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(insightIcon, color: context.timeTint, size: 22),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  insightTitle,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: context.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  insightText,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: context.textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

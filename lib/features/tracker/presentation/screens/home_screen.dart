@@ -244,13 +244,7 @@ class _HomeHeader extends StatelessWidget {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: context.isDark
-              ? [const Color(0xFF1E2A1F), const Color(0xFF161C17)]
-              : [const Color(0xFFF0F7F1), const Color(0xFFE8F2E9)],
-        ),
+        gradient: context.headerGradient,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -258,6 +252,9 @@ class _HomeHeader extends StatelessWidget {
             offset: const Offset(0, 10),
           ),
         ],
+        border: Border.all(
+          color: context.timeTint.withValues(alpha: 0.1),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -273,7 +270,7 @@ class _HomeHeader extends StatelessWidget {
                       greeting,
                       style: TextStyle(
                         fontSize: 14,
-                        color: AppColors.sageGreenLight,
+                        color: context.timeTint,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.5,
                       ),
@@ -295,12 +292,12 @@ class _HomeHeader extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: AppColors.sageGreen.withValues(alpha: 0.15),
+                  color: context.timeTint.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   _getTimeIcon(hour),
-                  color: AppColors.sageGreenLight,
+                  color: context.timeTint,
                   size: 24,
                 ),
               ),
@@ -321,7 +318,7 @@ class _HomeHeader extends StatelessWidget {
               children: [
                 Icon(
                   Icons.format_quote_rounded,
-                  color: AppColors.sageGreen.withValues(alpha: 0.3),
+                  color: context.timeTint.withValues(alpha: 0.3),
                   size: 20,
                 ),
                 const SizedBox(width: 8),

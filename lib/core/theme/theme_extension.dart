@@ -16,6 +16,20 @@ extension ThemeContextExtension on BuildContext {
   
   Color get glassBorder => isDark ? AppColors.glassBorder : const Color(0x0F000000);
   
+  /// Dynamic "Zen" tint based on time of day.
+  /// Fajr/Sunrise (4-8 AM): Amber
+  /// Day (8 AM - 6 PM): Sage (Standard)
+  /// Evening/Night (6 PM - 4 AM): Indigo/Violet
+  Color get timeTint {
+    final hour = DateTime.now().hour;
+    if (hour >= 4 && hour < 8) {
+      return isDark ? const Color(0xFFD4AF37) : const Color(0xFFB8860B); // Amber/Gold
+    } else if (hour >= 18 || hour < 4) {
+      return isDark ? const Color(0xFF9B8FD0) : const Color(0xFF6A5ACD); // Indigo/Slate
+    }
+    return AppColors.sageGreen; // Standard Sage
+  }
+
   LinearGradient get cardGradient => isDark 
       ? AppColors.cardGradient 
       : const LinearGradient(
@@ -32,12 +46,24 @@ extension ThemeContextExtension on BuildContext {
           colors: [Color(0xFFF0F7F1), Color(0xFFE2EEE3)],
         );
       
-  LinearGradient get headerGradient => isDark 
-      ? AppColors.headerGradient 
-      : const LinearGradient(
+  LinearGradient get headerGradient {
+    final tint = timeTint;
+    return isDark 
+      ? LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            tint.withValues(alpha: 0.15),
+            const Color(0xFF161C17),
+          ],
+        )
+      : LinearGradient(
           begin: Alignment.topCenter, 
           end: Alignment.bottomCenter, 
-          colors: [Color(0xFFFBFBFA), Color(0xFFF2F2EF)],
+          colors: [
+            tint.withValues(alpha: 0.05),
+            const Color(0xFFF2F2EF),
+          ],
         );
+  }
 }
-
