@@ -1,81 +1,84 @@
-# Amal Tracker
+# 🕌 Amal Tracker - Institutional Edition
 
-A premium, offline-first Islamic daily practices tracker built with Flutter, applying Clean Architecture and an automated CI/CD pipeline.
+[![Flutter](https://img.shields.io/badge/Flutter-3.11.5-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
+[![Supabase](https://img.shields.io/badge/Supabase-Backend-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
+[![Isar](https://img.shields.io/badge/Isar-NoSQL-4285F4)](https://isar.dev)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-## 🌟 Overview
+An elite, high-performance daily practice tracker built specifically for institutional use at the **As-Sunnah Foundation**. This platform enables employees to monitor their spiritual growth while providing administrators with high-level data insights into organizational well-being.
 
-Amal Tracker is designed to help Muslims track their daily Salah, Masnoon Azkar, Sunnah habits, and weekly/monthly rituals. Instead of feeling like a tedious checklist, the app is crafted to feel like a high-end productivity tool with a "Zen" aesthetic. It features a Bento grid layout, swipe-to-complete actions with haptic feedback, hold-to-fill counters, and an intelligent context-aware dashboard that adapts to the time of day.
+---
 
-## 🚀 Key Features
+## 💎 Premium Features
 
-- **Context-Aware Dashboard**: The home screen filters and highlights specific Amal (e.g., Fajr, Dhuhr, Evening Azkar) based on the current time of day, reducing cognitive load.
-- **Premium Gestures & Haptics**: 
-  - Swipe-to-complete cards with spring-back physics and satisfying visual reveals.
-  - Hold-to-fill circular counters for Azkar and Sunnah prayers.
-- **Offline-First Architecture**: Uses a local, SharedPreferences-backed data store ensuring the app is always fast and doesn't require an active internet connection.
-- **Smart Background Logic**: Utilizes `WorkManager` for an on-device "AI-like" notification engine (e.g., Sleep reminders at 10:00 PM, Friday Kahf reminders, Streak alerts).
-- **On-Device PDF Reports**: Converts your digital tracking data into a beautifully formatted, printable monthly PDF report using the `pdf` and `printing` packages.
-- **Automated CI/CD**: A GitHub Actions workflow compiles the app and generates a release-ready APK artifact every time code is pushed to the `main` branch.
+- **🛡️ Enterprise Security:** Biometric-gated Admin Panel (`local_auth`) with hardware-backed security.
+- **⚡ Offline-First Architecture:** Powered by **Isar Database** for 0ms latency local reads.
+- **☁️ Professional Sync:** Advanced conflict resolution logic (Last-Write-Wins) using Supabase.
+- **📊 Deep Analytics:** Dynamic charts for streak tracking, completion rates, and historical growth.
+- **🎨 Elite UI/UX:** A bespoke design system utilizing custom theme extensions, glassmorphism, and haptic-driven interactions.
 
-## 📐 Architecture & Standards
+---
 
-This project adheres strictly to international software engineering standards for scalable mobile applications:
+## 🏗️ Technical Architecture
 
-1. **Feature-First Clean Architecture**:
-   - `core/`: Contains app-wide services (database, notifications), constants, and theme definitions.
-   - `features/`: The app is split into independent feature modules (`tracker`, `analytics`, `settings`, `pdf_report`). This ensures low coupling and high cohesion.
-   - `shared/`: Houses reusable UI components (Glassmorphic cards, custom gestures) and extensions.
-2. **State Management**:
-   - Built heavily on **Riverpod**, the industry-standard reactive state management solution for Flutter, ensuring UI and business logic are cleanly separated.
-3. **UI/UX Best Practices**:
-   - Uses a centralized **Design System** (`AppColors`, `AppTypography`, `AppTheme`) to ensure consistency.
-   - Adopts a visually appealing Glassmorphic dark mode design, reducing eye strain and providing a premium feel.
-4. **SOLID Principles**:
-   - Services like `DatabaseService` and `NotificationService` are isolated, making them easy to swap or test without affecting the UI.
+The project follows a **Feature-First Domain-Driven Design (DDD)** approach, ensuring scalability and maintainability.
 
-## 🛠️ Tech Stack
+```text
+lib/
+├── core/               # Shared logic, services, and themes
+│   ├── constants/      # App-wide constants
+│   ├── database/       # Isar schemas and initialization
+│   ├── services/       # Core singletons (Auth, Notifications, etc.)
+│   └── theme/          # Bespoke design system and color tokens
+├── features/           # Independent business modules
+│   ├── admin/          # Institutional management & oversight
+│   ├── analytics/      # Historical data processing & visualization
+│   ├── auth/           # Identity & institutional onboarding
+│   ├── settings/       # User preferences & cloud management
+│   └── tracker/        # Core daily tracking & log management
+└── shared/             # Reusable UI components & models
+```
 
-- **Framework**: Flutter 3.x
-- **Language**: Dart
-- **State Management**: flutter_riverpod
-- **Local Database**: shared_preferences (with local JSON proxy caching)
-- **Background Tasks**: workmanager
-- **Notifications**: flutter_local_notifications
-- **PDF Generation**: pdf & printing
-- **Charts/Analytics**: fl_chart
-- **CI/CD**: GitHub Actions
+---
 
-## 📱 CI/CD & Deployment
+## 🛠️ Getting Started
 
-This project includes a fully configured `.github/workflows/build_release.yml` file. 
+### Prerequisites
+- Flutter SDK `^3.11.5`
+- A Supabase Project with our custom SQL schema applied.
 
-Whenever changes are pushed to the `main` branch:
-1. GitHub Actions provisions an Ubuntu runner.
-2. Sets up the Flutter SDK and Java environments.
-3. Resolves dependencies.
-4. Analyzes the code.
-5. Builds a production-ready `app-release.apk`.
-6. Uploads the APK as a downloadable artifact.
-
-## 🏃 Getting Started
-
-To run this project locally:
-
-1. Clone the repository:
+### Local Setup
+1. **Clone the repository:**
    ```bash
    git clone https://github.com/zihaaaad/amal-tracker.git
    ```
-2. Navigate to the project directory:
-   ```bash
-   cd amal-tracker
-   ```
-3. Get Flutter dependencies:
+2. **Install dependencies:**
    ```bash
    flutter pub get
    ```
-4. Run the app:
+3. **Generate local database schemas:**
    ```bash
-   flutter run
+   dart run build_runner build --delete-conflicting-outputs
    ```
+4. **Configure environment:**
+   Update `lib/core/constants/app_constants.dart` with your Supabase credentials.
 
-*(Note: Supabase backend integration is currently scaffolded but disabled for the offline-first experience. To enable cloud sync, provide valid keys in `lib/core/constants/app_constants.dart`.)*
+---
+
+## 🚢 Deployment & CI/CD
+We utilize a hardened **GitHub Actions** workflow for production delivery:
+- **Analyze:** Strict linting and analysis rules.
+- **Build:** Automated release APK generation.
+- **Release:** Continuous Deployment to GitHub Releases.
+
+---
+
+## 🤝 Contributing
+As an enterprise application, we maintain high standards for code quality. Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for our architectural guidelines and PR process.
+
+---
+
+## 📜 License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+**Engineered with precision for the As-Sunnah Foundation.**

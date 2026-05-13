@@ -10,6 +10,7 @@ import '../../../../core/database/database_service.dart';
 import '../../../pdf_report/pdf_generator.dart';
 import '../../../tracker/providers/tasks_provider.dart';
 import '../../../tracker/data/models/amal_task.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class AnalyticsScreen extends ConsumerStatefulWidget {
   const AnalyticsScreen({super.key});
@@ -98,12 +99,12 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                 ),
               ),
             ],
-          ),
+          ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.1, end: 0),
 
           const SizedBox(height: 16),
 
           // ── Weekly Trend Comparison ─────────────────────────────
-          _buildWeeklyTrend(context, tasks),
+          _buildWeeklyTrend(context, tasks).animate().fadeIn(delay: 200.ms, duration: 600.ms).slideX(begin: 0.05, end: 0),
 
           const SizedBox(height: 28),
 

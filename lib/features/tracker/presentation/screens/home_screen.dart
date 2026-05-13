@@ -13,6 +13,7 @@ import '../../providers/tasks_provider.dart';
 import '../../data/models/amal_task.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../widgets/dynamic_task_card.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -90,7 +91,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           dateStr: dateStr,
                           quote: quote,
                           hour: now.hour,
-                        ),
+                        ).animate().fadeIn(duration: 600.ms).slideY(begin: -0.1, end: 0, curve: Curves.easeOutCubic),
                       ),
 
                       // ── Progress Ring ────────────────────────────
@@ -103,7 +104,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             totalCount: dailyLog.getTotalPoints(allTasks),
                             streak: streak,
                           ),
-                        ),
+                        ).animate().fadeIn(delay: 200.ms, duration: 600.ms).scale(begin: const Offset(0.95, 0.95)),
                       ),
 
                       // ── Task Categories ──────────────────────────
@@ -134,7 +135,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 delegate: SliverChildBuilderDelegate(
                                   (context, index) {
                                     if (index >= tasks.length) return null;
-                                    return DynamicTaskCard(task: tasks[index]);
+                                    return DynamicTaskCard(task: tasks[index])
+                                        .animate()
+                                        .fadeIn(delay: (400 + (index * 50)).ms, duration: 400.ms)
+                                        .slideX(begin: 0.05, end: 0);
                                   },
                                   childCount: tasks.length,
                                 ),
