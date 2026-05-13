@@ -120,19 +120,15 @@ class TaskService {
 
 
   // ─── Internal Management Methods ──────────────────
-  // Note: These should only be used by the separate Admin App
-
-  @protected
+  
   Future<void> addTask(AmalTask task) async {
     await _supabase.from('amal_tasks').insert(task.toJson());
   }
 
-  @protected
   Future<void> updateTask(AmalTask task) async {
     await _supabase.from('amal_tasks').update(task.toJson()).eq('id', task.id);
   }
 
-  @protected
   Future<void> softDeleteTask(String taskId) async {
     await _supabase.from('amal_tasks').update({'is_active': false}).eq('id', taskId);
   }

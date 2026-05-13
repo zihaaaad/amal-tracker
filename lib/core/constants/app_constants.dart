@@ -14,9 +14,9 @@ class AppConstants {
 
   // ─── Notification Channels ────────────────────────
   static const String notificationChannelId = 'amal_tracker_notifications';
-  static const String notificationChannelName = 'Amal Tracker';
+  static const String notificationChannelName = 'As-Sunnah Tracker';
   static const String notificationChannelDesc =
-      'Smart reminders for your daily Amal';
+      'Smart reminders for As-Sunnah Foundation employees';
 
   // ─── WorkManager Task Names ───────────────────────
   static const String backgroundTaskName = 'amalTrackerBackgroundCheck';

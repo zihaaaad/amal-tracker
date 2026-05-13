@@ -10,6 +10,17 @@ class AuthService {
   Session? get currentSession => _supabase.auth.currentSession;
   Stream<AuthState> get authStateChanges => _supabase.auth.onAuthStateChange;
 
+  /// Checks if the current user has admin privileges.
+  /// Typically stored in user metadata or a separate 'profiles' table.
+  bool get isAdmin {
+    final user = currentUser;
+    if (user == null) return false;
+    // For production, this should check a dedicated 'role' field.
+    // Here we check metadata or email domain for institutional control.
+    final metadata = user.userMetadata ?? {};
+    return metadata['role'] == 'admin' || user.email?.endsWith('@assunnahfoundation.org') == true;
+  }
+
   Future<AuthResponse> signIn({required String email, required String password}) async {
     return await _supabase.auth.signInWithPassword(
       email: email,

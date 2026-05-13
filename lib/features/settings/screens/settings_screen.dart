@@ -8,6 +8,7 @@ import '../../../../core/database/database_service.dart';
 import '../../tracker/providers/daily_log_provider.dart';
 import '../providers/settings_provider.dart';
 import '../../../../core/services/auth_service.dart';
+import '../../admin/presentation/screens/admin_task_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -61,6 +62,26 @@ class SettingsScreen extends ConsumerWidget {
           ),
           
           const SizedBox(height: 32),
+
+          const SizedBox(height: 24),
+
+          // Admin Dashboard (Institutional Control)
+          if (AuthService.instance.isAdmin) ...[
+            _buildSectionTitle(context, 'INSTITUTIONAL CONTROL'),
+            _buildSettingsTile(context,
+              icon: Icons.admin_panel_settings_rounded,
+              title: 'Admin Dashboard',
+              subtitle: 'Manage Foundation tasks & employees',
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AdminTaskScreen()),
+                );
+              },
+            ),
+            const SizedBox(height: 24),
+          ],
 
           // Account & Sync
           _buildSectionTitle(context, 'ACCOUNT'),
@@ -243,7 +264,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Amal Tracker',
+            'As-Sunnah Tracker',
             style: GoogleFonts.outfit(
               fontSize: 20,
               fontWeight: FontWeight.w800,
@@ -252,12 +273,12 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'v1.0.0 Stable',
+            'Institutional Edition • v1.0.0',
             style: TextStyle(color: context.textMuted, fontSize: 12, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
           Text(
-            'Built for spiritual focus and daily discipline.\nMay Allah accept our small consistent efforts.',
+            'Dedicated to the employees of As-Sunnah Foundation.\nMay this serve as a means for our shared spiritual growth.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: context.textSecondary,

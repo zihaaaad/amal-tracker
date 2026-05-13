@@ -271,12 +271,22 @@ class _HomeHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
+                      'AS-SUNNAH FOUNDATION',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.5,
+                        color: context.timeTint.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
                       greeting,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 16,
                         color: context.timeTint,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.2,
                       ),
                     ),
                     const SizedBox(height: 4),
