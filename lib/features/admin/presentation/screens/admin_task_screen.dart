@@ -7,6 +7,8 @@ import '../../../../core/services/profile_service.dart';
 import '../../../tracker/data/models/amal_task.dart';
 import '../../../tracker/data/services/task_service.dart';
 import '../../../tracker/providers/tasks_provider.dart';
+import 'package:local_auth/local_auth.dart';
+import 'package:flutter/services.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -19,11 +21,50 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
   late TabController _tabController;
   String _userSearchQuery = "";
   String _selectedDept = "All";
+  bool _isAuthenticated = false;
+  bool _isAuthenticating = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _authenticate();
+  }
+
+  Future<void> _authenticate() async {
+    final LocalAuthentication auth = LocalAuthentication();
+    bool authenticated = false;
+    try {
+      final bool canAuthenticateWithBiometrics = await auth.canCheckBiometrics;
+      final bool canAuthenticate = canAuthenticateWithBiometrics || await auth.isDeviceSupported();
+      
+      if (!canAuthenticate) {
+        // Fallback: If device doesn't support secure auth, grant access (or handle via PIN)
+        authenticated = true;
+      } else {
+        authenticated = await auth.authenticate(
+          localizedReason: 'Authenticate to access Foundation Admin',
+          options: const AuthenticationOptions(
+            stickyAuth: true,
+            biometricOnly: false,
+          ),
+        );
+      }
+    } on PlatformException catch (e) {
+      debugPrint('Auth error: \$e');
+      authenticated = false;
+    }
+
+    if (mounted) {
+      if (authenticated) {
+        setState(() {
+          _isAuthenticated = true;
+          _isAuthenticating = false;
+        });
+      } else {
+        Navigator.of(context).pop();
+      }
+    }
   }
 
   @override
@@ -34,6 +75,22 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
 
   @override
   Widget build(BuildContext context) {
+    if (_isAuthenticating) {
+      return Scaffold(
+        backgroundColor: context.surface,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.lock_outline_rounded, size: 48, color: context.timeTint),
+              const SizedBox(height: 16),
+              const CircularProgressIndicator(),
+            ],
+          ),
+        ),
+      );
+    }
+
     final tasksAsync = ref.watch(tasksProvider);
 
     return Scaffold(

@@ -232,19 +232,41 @@ class DatabaseService {
     final entries = await _isar.dailyLogEntrys.where().findAll();
     if (entries.isEmpty) return;
 
-    // Batch upsert in chunks of 50 to avoid payload limits
-    final logsJson = entries.map((e) {
-      return {
-        'date': e.date,
-        'values': json.decode(e.valuesJson),
-        'user_id': user.id,
-      };
-    }).toList();
+    // 1. Fetch cloud timestamps to compare
+    List<dynamic> cloudData = [];
+    try {
+      cloudData = await client.from('daily_logs').select('date, updated_at').eq('user_id', user.id);
+    } catch (e) {
+      debugPrint('Failed to fetch cloud timestamps: $e');
+      return;
+    }
+
+    final cloudMap = { 
+      for (var e in cloudData) 
+        e['date']: e['updated_at'] != null ? DateTime.parse(e['updated_at']) : DateTime.fromMillisecondsSinceEpoch(0) 
+    };
+
+    final logsToSync = <Map<String, dynamic>>[];
+
+    // 2. Only push logs where local is newer than cloud
+    for (final e in entries) {
+      final cloudUpdatedAt = cloudMap[e.date];
+      if (cloudUpdatedAt == null || e.updatedAt.isAfter(cloudUpdatedAt)) {
+        logsToSync.add({
+          'date': e.date,
+          'values': json.decode(e.valuesJson),
+          'user_id': user.id,
+          'updated_at': e.updatedAt.toIso8601String(),
+        });
+      }
+    }
+
+    if (logsToSync.isEmpty) return;
 
     // Process in batches
     const batchSize = 50;
-    for (int i = 0; i < logsJson.length; i += batchSize) {
-      final batch = logsJson.sublist(i, (i + batchSize).clamp(0, logsJson.length));
+    for (int i = 0; i < logsToSync.length; i += batchSize) {
+      final batch = logsToSync.sublist(i, (i + batchSize).clamp(0, logsToSync.length));
       try {
         await client.from('daily_logs').upsert(batch);
       } catch (e) {
@@ -264,12 +286,23 @@ class DatabaseService {
 
       await _isar.writeTxn(() async {
         for (final item in data) {
-          final entry = DailyLogEntry()
-            ..date = item['date'] is String ? item['date'] : item['date'].toString()
-            ..valuesJson = json.encode(item['values'] ?? {})
-            ..createdAt = DateTime.now()
-            ..updatedAt = DateTime.now();
-          await _isar.dailyLogEntrys.put(entry);
+          final dateStr = item['date'] is String ? item['date'] : item['date'].toString();
+          final cloudUpdatedAt = item['updated_at'] != null 
+              ? DateTime.parse(item['updated_at']) 
+              : DateTime.fromMillisecondsSinceEpoch(0);
+              
+          final localEntry = await _isar.dailyLogEntrys.filter().dateEqualTo(dateStr).findFirst();
+          
+          // Only overwrite local if cloud is strictly newer, or local doesn't exist
+          if (localEntry == null || cloudUpdatedAt.isAfter(localEntry.updatedAt)) {
+            final entry = DailyLogEntry()
+              ..id = localEntry?.id ?? Isar.autoIncrement
+              ..date = dateStr
+              ..valuesJson = json.encode(item['values'] ?? {})
+              ..createdAt = localEntry?.createdAt ?? DateTime.now()
+              ..updatedAt = cloudUpdatedAt;
+            await _isar.dailyLogEntrys.put(entry);
+          }
         }
       });
     } catch (e) {
