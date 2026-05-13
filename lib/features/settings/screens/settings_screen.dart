@@ -10,6 +10,7 @@ import '../providers/settings_provider.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../admin/presentation/screens/admin_task_screen.dart';
 import 'package:local_auth/local_auth.dart';
+import '../../auth/providers/auth_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});

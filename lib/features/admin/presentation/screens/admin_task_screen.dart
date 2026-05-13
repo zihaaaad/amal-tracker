@@ -9,7 +9,6 @@ import '../../../tracker/data/services/task_service.dart';
 import '../../../tracker/providers/tasks_provider.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:uuid/uuid.dart';
-import 'package:local_auth/local_auth.dart';
 import 'package:flutter/services.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
