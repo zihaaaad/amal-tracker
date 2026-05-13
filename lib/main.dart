@@ -36,19 +36,23 @@ void main() async {
     systemNavigationBarIconBrightness: Brightness.light,
   ));
 
-  // Parallel init — timezone + local DB
+  // Parallel init: timezone + local DB
   await Future.wait([
     _initTimezone(),
     DatabaseService.initialize(),
   ]);
 
-  // Supabase init
+  // Supabase — handles session restoration, deep links, OAuth callbacks
   await Supabase.initialize(
     url: AppConstants.supabaseUrl,
     anonKey: AppConstants.supabaseAnonKey,
+    // PKCE is the secure default for mobile OAuth — required for Google Sign-In
+    authOptions: const FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.pkce,
+    ),
   );
 
-  // Non-critical — fire and forget
+  // Non-critical services — don't block startup
   NotificationService.initialize().catchError((_) {});
   BackgroundService.initialize().catchError((_) {});
 
@@ -65,7 +69,7 @@ Future<void> _initTimezone() async {
   }
 }
 
-// ─── Root App ──────────────────────────────────────────
+// ─── Root App ──────────────────────────────────────────────────
 
 class AmalTrackerApp extends ConsumerWidget {
   const AmalTrackerApp({super.key});
@@ -85,7 +89,12 @@ class AmalTrackerApp extends ConsumerWidget {
   }
 }
 
-// ─── Router ────────────────────────────────────────────
+// ─── Router ────────────────────────────────────────────────────
+//
+// Responsibilities:
+//   1. Show splash for one frame while Supabase restores the cached session
+//   2. After that, route to AuthScreen or MainNavigationScreen based on session
+//   3. Re-route automatically when auth state changes (login / logout / OAuth return)
 
 class _AppRouter extends ConsumerStatefulWidget {
   const _AppRouter();
@@ -100,7 +109,7 @@ class _AppRouterState extends ConsumerState<_AppRouter> {
   @override
   void initState() {
     super.initState();
-    // Give Supabase one frame to restore cached session, then decide
+    // One frame is enough for Supabase to restore a cached session synchronously
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) setState(() => _ready = true);
     });
@@ -108,19 +117,33 @@ class _AppRouterState extends ConsumerState<_AppRouter> {
 
   @override
   Widget build(BuildContext context) {
-    // Keep watching auth stream so login/logout navigates automatically
-    ref.watch(authStateProvider);
+    // Watch the auth stream — causes rebuild on every auth state change:
+    //   - Email/password login → session created
+    //   - Google OAuth return → onAuthStateChange fires
+    //   - Sign out → session destroyed
+    final authAsync = ref.watch(authStateProvider);
+
+    // Direct session read — always reflects ground-truth Supabase state
     final session = ref.watch(sessionProvider);
 
-    if (!_ready) return const SplashScreen();
+    // Show splash while:
+    //   (a) waiting for first frame (Supabase session restore), OR
+    //   (b) auth stream is still in initial loading state
+    if (!_ready || authAsync.isLoading) {
+      return const SplashScreen();
+    }
 
-    if (session != null) return const MainNavigationScreen();
+    // Session present → go to app
+    if (session != null) {
+      return const MainNavigationScreen();
+    }
 
+    // No session → show login
     return const AuthScreen();
   }
 }
 
-// ─── Main Navigation ───────────────────────────────────
+// ─── Main Navigation ───────────────────────────────────────────
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});

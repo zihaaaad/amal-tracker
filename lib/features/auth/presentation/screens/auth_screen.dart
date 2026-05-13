@@ -19,6 +19,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   bool _isLogin = true;
   bool _isLoading = false;
   bool _obscurePassword = true;
+  // Tracks Google OAuth — user is in external browser, waiting to return
+  bool _awaitingGoogleReturn = false;
 
   @override
   void dispose() {
@@ -33,42 +35,101 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     setState(() => _isLoading = true);
     try {
       if (_isLogin) {
-        await AuthService.instance.signIn(
+        // ── Sign In ────────────────────────────────────────
+        final response = await AuthService.instance.signIn(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
-        if (mounted) {
+        if (mounted && response.session != null) {
+          // Session established — restore cloud history then router auto-navigates
           await ref.read(dailyLogProvider.notifier).restoreFromCloud();
+        } else if (mounted && response.session == null) {
+          _showError('Sign in failed. Please check your credentials.');
         }
       } else {
-        await AuthService.instance.signUp(
+        // ── Sign Up ────────────────────────────────────────
+        final response = await AuthService.instance.signUp(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Verification email sent! Check your inbox.'),
-              backgroundColor: Colors.green,
-            ),
-          );
+        if (!mounted) return;
+
+        if (response.session != null) {
+          // Email confirmation is disabled — session is ready, router will navigate
+          await ref.read(dailyLogProvider.notifier).restoreFromCloud();
+        } else {
+          // Email confirmation is required — tell the user to check inbox
+          _showSuccess('Account created! Check your email to verify and then sign in.');
         }
       }
     } catch (e) {
-      _showError(e.toString().replaceAll('Exception: ', ''));
+      _showError(_friendlyError(e.toString()));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  Future<void> _handleGoogle() async {
+    setState(() {
+      _isLoading = true;
+      _awaitingGoogleReturn = false;
+    });
+    try {
+      await AuthService.instance.signInWithGoogle();
+      // signInWithOAuth returns immediately after opening the browser.
+      // Auth state change fires when user returns — _AppRouter listens and navigates.
+      // Show a "waiting" state while user is in the browser.
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _awaitingGoogleReturn = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _awaitingGoogleReturn = false;
+        });
+        _showError(_friendlyError(e.toString()));
+      }
+    }
+  }
+
+  String _friendlyError(String raw) {
+    final msg = raw.replaceAll('Exception: ', '').replaceAll('AuthException: ', '');
+    if (msg.contains('Invalid login credentials')) return 'Incorrect email or password.';
+    if (msg.contains('Email not confirmed')) return 'Please verify your email first.';
+    if (msg.contains('User already registered')) return 'An account with this email already exists.';
+    if (msg.contains('Password should be')) return 'Password must be at least 6 characters.';
+    if (msg.contains('Unable to validate')) return 'Invalid email or password format.';
+    if (msg.contains('network') || msg.contains('SocketException')) return 'No internet connection. Please try again.';
+    return msg.length > 100 ? 'An error occurred. Please try again.' : msg;
+  }
+
   void _showError(String message) {
     if (!mounted) return;
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.redAccent,
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(20),
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  void _showSuccess(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
@@ -81,11 +142,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(32),
+            padding: const EdgeInsets.all(28),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Icon
+                // App Icon
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -100,7 +161,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
 
                 Text(
                   'Amal Tracker',
@@ -116,15 +177,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
                 Text(
                   _isLogin ? 'Sign in to continue' : 'Create your account',
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: context.textSecondary,
-                  ),
+                  style: TextStyle(fontSize: 15, color: context.textSecondary),
                 ),
 
-                const SizedBox(height: 40),
+                const SizedBox(height: 36),
 
-                // Form
+                // ── Form ──────────────────────────────────────────
                 Form(
                   key: _formKey,
                   child: Container(
@@ -143,7 +201,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           type: TextInputType.emailAddress,
                           validator: (v) {
                             if (v == null || v.trim().isEmpty) return 'Email is required';
-                            if (!v.contains('@')) return 'Enter a valid email';
+                            if (!v.contains('@') || !v.contains('.')) return 'Enter a valid email';
                             return null;
                           },
                         ),
@@ -160,7 +218,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           },
                         ),
                         const SizedBox(height: 24),
-                        // Sign in button
+                        // Submit Button
                         SizedBox(
                           width: double.infinity,
                           height: 52,
@@ -199,7 +257,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
                 const SizedBox(height: 24),
 
-                // OR divider
+                // ── Divider ───────────────────────────────────────
                 Row(
                   children: [
                     Expanded(child: Divider(color: context.glassBorder)),
@@ -220,39 +278,37 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
                 const SizedBox(height: 24),
 
-                // Google button
+                // ── Google Button ─────────────────────────────────
                 SizedBox(
                   width: double.infinity,
                   height: 52,
                   child: OutlinedButton.icon(
-                    onPressed: _isLoading
-                        ? null
-                        : () async {
-                            setState(() => _isLoading = true);
-                            try {
-                              await AuthService.instance.signInWithGoogle();
-                            } catch (e) {
-                              _showError(e.toString().replaceAll('Exception: ', ''));
-                            } finally {
-                              if (mounted) setState(() => _isLoading = false);
-                            }
-                          },
+                    onPressed: (_isLoading || _awaitingGoogleReturn) ? null : _handleGoogle,
                     style: OutlinedButton.styleFrom(
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                       side: BorderSide(color: context.glassBorder),
+                      backgroundColor: context.surfaceCard,
                     ),
-                    icon: const Text(
-                      'G',
-                      style: TextStyle(
-                        color: Color(0xFF4285F4),
-                        fontWeight: FontWeight.w900,
-                        fontSize: 18,
-                      ),
-                    ),
+                    icon: _awaitingGoogleReturn
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text(
+                            'G',
+                            style: TextStyle(
+                              color: Color(0xFF4285F4),
+                              fontWeight: FontWeight.w900,
+                              fontSize: 18,
+                            ),
+                          ),
                     label: Text(
-                      'Continue with Google',
+                      _awaitingGoogleReturn
+                          ? 'Waiting for Google...'
+                          : 'Continue with Google',
                       style: TextStyle(
                         color: context.textPrimary,
                         fontWeight: FontWeight.w500,
@@ -262,16 +318,40 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   ),
                 ),
 
+                // Show helper text when waiting for Google OAuth return
+                if (_awaitingGoogleReturn)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(
+                      'Complete sign-in in the browser, then return here.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: context.textMuted,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+
                 const SizedBox(height: 32),
 
-                // Toggle login/signup
+                // ── Toggle Login / Signup ─────────────────────────
                 TextButton(
-                  onPressed: () => setState(() => _isLogin = !_isLogin),
+                  onPressed: _isLoading
+                      ? null
+                      : () => setState(() {
+                            _isLogin = !_isLogin;
+                            _awaitingGoogleReturn = false;
+                            _formKey.currentState?.reset();
+                          }),
                   child: RichText(
                     text: TextSpan(
                       style: TextStyle(color: context.textSecondary, fontSize: 14),
                       children: [
-                        TextSpan(text: _isLogin ? "Don't have an account? " : "Already have an account? "),
+                        TextSpan(
+                          text: _isLogin
+                              ? "Don't have an account? "
+                              : "Already have an account? ",
+                        ),
                         TextSpan(
                           text: _isLogin ? 'Sign Up' : 'Sign In',
                           style: TextStyle(
@@ -313,11 +393,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         suffixIcon: isPassword
             ? IconButton(
                 icon: Icon(
-                  _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  _obscurePassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
                   size: 20,
                   color: context.textMuted,
                 ),
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
               )
             : null,
         filled: true,
@@ -329,7 +412,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
           ),
         ),
         errorBorder: OutlineInputBorder(

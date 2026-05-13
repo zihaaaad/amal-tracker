@@ -1,31 +1,25 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../../core/services/auth_service.dart';
 
-/// Streams future auth state changes (login, logout, token refresh).
+/// Streams every auth state change:
+///   - Email login / signup
+///   - Google OAuth callback (fires when user returns from browser)
+///   - Token refresh
+///   - Sign out
 final authStateProvider = StreamProvider<AuthState>((ref) {
-  return AuthService.instance.authStateChanges;
+  return Supabase.instance.client.auth.onAuthStateChange;
 });
 
-/// The current session — reads DIRECTLY from Supabase (not from stream).
-/// This is always immediately available without waiting for a stream event.
+/// Current session — reads directly from Supabase client (synchronous, always fresh).
+/// Re-evaluates whenever authStateProvider emits so routing stays in sync.
 final sessionProvider = Provider<Session?>((ref) {
-  // When auth stream fires, invalidate this provider to recompute
+  // Subscribe to auth stream so this provider invalidates on every auth event
   ref.watch(authStateProvider);
-  // Always read the ground-truth directly from Supabase client
+  // Return the live session directly from Supabase — never stale
   return Supabase.instance.client.auth.currentSession;
 });
 
-/// Current user derived from session.
+/// Current authenticated user.
 final userProvider = Provider<User?>((ref) {
   return ref.watch(sessionProvider)?.user;
-});
-
-/// Whether auth state is fully determined (session check complete).
-/// Used for routing — avoids showing wrong screen during initialization.
-final isAuthReadyProvider = Provider<bool>((ref) {
-  final authAsync = ref.watch(authStateProvider);
-  // Auth is ready when: stream has emitted at least once OR we have a known session
-  return authAsync.hasValue || 
-         Supabase.instance.client.auth.currentSession != null;
 });
