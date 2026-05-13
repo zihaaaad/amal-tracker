@@ -12,11 +12,13 @@ import 'core/services/background_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_extension.dart';
+import 'core/services/auth_service.dart';
 
 import 'features/settings/providers/settings_provider.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/auth/presentation/screens/auth_screen.dart';
 import 'features/auth/presentation/screens/splash_screen.dart';
+import 'features/auth/presentation/screens/onboarding_screen.dart';
 import 'features/tracker/presentation/screens/home_screen.dart';
 import 'features/analytics/presentation/screens/analytics_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
@@ -111,6 +113,9 @@ class _AppRouterState extends ConsumerState<_AppRouter> {
     }
 
     if (session != null) {
+      if (!AuthService.instance.isProfileComplete) {
+        return const OnboardingScreen();
+      }
       return const MainNavigationScreen();
     }
 

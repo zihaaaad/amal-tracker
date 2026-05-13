@@ -21,6 +21,36 @@ class AuthService {
     return metadata['role'] == 'admin' || user.email?.endsWith('@assunnahfoundation.org') == true;
   }
 
+  /// Returns true if the user has completed their institutional onboarding.
+  bool get isProfileComplete {
+    final user = currentUser;
+    if (user == null) return false;
+    final metadata = user.userMetadata ?? {};
+    return metadata['is_profile_complete'] == true;
+  }
+
+  /// Updates user profile metadata in Supabase.
+  Future<void> updateProfile({
+    required String name,
+    required String phone,
+    required String department,
+    required String employeeId,
+    required String subInstitute,
+  }) async {
+    await _supabase.auth.updateUser(
+      UserAttributes(
+        data: {
+          'full_name': name,
+          'phone': phone,
+          'department': department,
+          'employee_id': employeeId,
+          'sub_institute': subInstitute,
+          'is_profile_complete': true,
+        },
+      ),
+    );
+  }
+
   Future<AuthResponse> signIn({required String email, required String password}) async {
     return await _supabase.auth.signInWithPassword(
       email: email,

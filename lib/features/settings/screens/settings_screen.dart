@@ -76,7 +76,7 @@ class SettingsScreen extends ConsumerWidget {
                 HapticFeedback.mediumImpact();
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const AdminTaskScreen()),
+                  MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
                 );
               },
             ),
