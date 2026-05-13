@@ -172,6 +172,15 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    // Refresh profile once on navigation start to pick up any role changes (e.g. manual Supabase updates)
+    AuthService.instance.refreshProfile().then((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
   static const _screens = [
     HomeScreen(),
     AnalyticsScreen(),
