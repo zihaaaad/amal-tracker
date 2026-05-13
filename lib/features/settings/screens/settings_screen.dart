@@ -16,6 +16,12 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Force a background refresh of the profile to pick up any manual role changes
+    AuthService.instance.refreshProfile().then((_) {
+      // If we are on this screen, we might need to rebuild if the role changed
+      if (context.mounted) ref.invalidate(authStateProvider);
+    });
+    
     final settings = ref.watch(settingsProvider);
 
     return Scaffold(
