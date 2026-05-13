@@ -123,10 +123,12 @@ class TaskService {
   
   Future<void> addTask(AmalTask task) async {
     await _supabase.from('amal_tasks').insert(task.toJson());
+    await _refreshCache(); // Immediate local sync for Admin
   }
 
   Future<void> updateTask(AmalTask task) async {
     await _supabase.from('amal_tasks').update(task.toJson()).eq('id', task.id);
+    await _refreshCache(); // Immediate local sync for Admin
   }
 
   Future<void> softDeleteTask(String taskId) async {
