@@ -21,7 +21,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
   late TabController _tabController;
   String _userSearchQuery = "";
   String _selectedDept = "All";
-  bool _isAuthenticated = false;
   bool _isAuthenticating = true;
 
   @override
@@ -50,15 +49,14 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
           ),
         );
       }
-    } on PlatformException catch (e) {
-      debugPrint('Auth error: \$e');
+    } on PlatformException catch (_) {
+      debugPrint('Auth error occurred');
       authenticated = false;
     }
 
     if (mounted) {
       if (authenticated) {
         setState(() {
-          _isAuthenticated = true;
           _isAuthenticating = false;
         });
       } else {

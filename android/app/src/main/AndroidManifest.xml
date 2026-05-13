@@ -8,9 +8,11 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <!-- Required for POST_NOTIFICATIONS on Android 13+ -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
 
     <application
-        android:label="amal_tracker"
+        android:label="Amal Tracker"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

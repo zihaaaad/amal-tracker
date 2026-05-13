@@ -1,3 +1,4 @@
+// ignore_for_file: experimental_member_use
 import 'package:isar/isar.dart';
 
 part 'isar_schemas.g.dart';
