@@ -1,4 +1,6 @@
+import 'dart:ui' as ui;
 import 'package:easy_localization/easy_localization.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +15,7 @@ import 'core/database/database_service.dart';
 import 'core/services/auth_service.dart';
 import 'core/services/background_service.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/push_notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_extension.dart';
 import 'features/admin/presentation/screens/admin_task_screen.dart';
@@ -55,6 +58,7 @@ class AppCore {
         _initTimezone().timeout(const Duration(seconds: 5)),
         DatabaseService.initialize().timeout(const Duration(seconds: 10)),
         _prewarmAssets().timeout(const Duration(seconds: 5)),
+        _initFirebase().timeout(const Duration(seconds: 15)),
       ]).catchError((e) {
         debugPrint('Non-critical initialization error: $e');
         return [];
@@ -79,9 +83,20 @@ class AppCore {
     }
   }
 
+  static Future<void> _initFirebase() async {
+    try {
+      // Note: Requires google-services.json for Android and GoogleService-Info.plist for iOS
+      await Firebase.initializeApp();
+      await PushNotificationService.initialize();
+      await PushNotificationService.subscribeToTopic('global_announcements');
+    } catch (e) {
+      debugPrint('Firebase init bypassed (missing config): $e');
+    }
+  }
+
   static Future<void> _prewarmAssets() async {
     // Layout pre-warm with explicit direction
-    TextPainter(textDirection: TextDirection.ltr).layout();
+    TextPainter(textDirection: ui.TextDirection.ltr).layout();
     try {
       await GoogleFonts.pendingFonts([
         GoogleFonts.outfit(),
