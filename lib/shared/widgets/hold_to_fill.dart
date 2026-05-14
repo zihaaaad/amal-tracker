@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/theme_extension.dart';
 
@@ -19,7 +20,7 @@ class HoldToFill extends StatefulWidget {
     required this.maxValue,
     required this.color,
     required this.onValueChanged,
-    this.size = 52, // Slightly more compact
+    this.size = 52,
   });
 
   @override
@@ -53,11 +54,11 @@ class _HoldToFillState extends State<HoldToFill>
   void _tickCounter() async {
     if (!_isHolding || !mounted) return;
 
-    await Future.delayed(const Duration(milliseconds: 250)); // Faster hold response
+    await Future.delayed(const Duration(milliseconds: 220)); 
     if (!_isHolding || !mounted) return;
 
     _increment();
-    _tickCounter(); // recursive
+    _tickCounter();
   }
 
   void _increment() {
@@ -70,9 +71,9 @@ class _HoldToFillState extends State<HoldToFill>
     });
 
     if (_displayValue == widget.maxValue) {
-      HapticFeedback.heavyImpact();
+      HapticFeedback.mediumImpact();
     } else {
-      HapticFeedback.selectionClick();
+      HapticFeedback.lightImpact();
     }
     widget.onValueChanged(_displayValue);
   }
@@ -88,7 +89,10 @@ class _HoldToFillState extends State<HoldToFill>
     final activeColor = isComplete ? AppColors.sageGreen : widget.color;
 
     return GestureDetector(
-      onLongPressStart: (_) => _startHold(),
+      onLongPressStart: (_) {
+        HapticFeedback.selectionClick();
+        _startHold();
+      },
       onLongPressEnd: (_) => _stopHold(),
       onTap: _increment,
       child: Container(
@@ -107,8 +111,8 @@ class _HoldToFillState extends State<HoldToFill>
               height: widget.size,
               child: TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0, end: progress),
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOutBack,
+                duration: const Duration(milliseconds: 350),
+                curve: Curves.easeOutCubic,
                 builder: (context, value, _) {
                   return CustomPaint(
                     painter: _CounterPainter(
@@ -128,7 +132,7 @@ class _HoldToFillState extends State<HoldToFill>
               transitionBuilder: (Widget child, Animation<double> animation) {
                 return ScaleTransition(
                   scale: animation.drive(Tween(begin: 0.8, end: 1.0)
-                      .chain(CurveTween(curve: Curves.elasticOut))),
+                      .chain(CurveTween(curve: Curves.backOut))),
                   child: FadeTransition(opacity: animation, child: child),
                 );
               },
@@ -139,13 +143,13 @@ class _HoldToFillState extends State<HoldToFill>
                   fontSize: widget.size * 0.35,
                   fontWeight: FontWeight.w800,
                   color: isComplete ? AppColors.sageGreenLight : context.textPrimary,
-                  fontFamily: 'monospace', // Tabular figures
+                  fontFamily: 'monospace',
                 ),
               ),
             ),
           ],
         ),
-      ),
+      ).animate(target: isComplete ? 1 : 0).scale(begin: const Offset(1,1), end: const Offset(1.1, 1.1), curve: Curves.elasticOut),
     );
   }
 }

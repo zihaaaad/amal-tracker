@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -72,7 +73,7 @@ class _CheckboxTaskCardState extends ConsumerState<_CheckboxTaskCard>
   Future<void> _toggle() async {
     final isGoingToComplete = !widget.isCompleted;
     if (isGoingToComplete) {
-      await HapticFeedback.heavyImpact();
+      await HapticFeedback.mediumImpact();
     } else {
       await HapticFeedback.lightImpact();
     }
@@ -96,6 +97,7 @@ class _CheckboxTaskCardState extends ConsumerState<_CheckboxTaskCard>
             children: [
               SlidableAction(
                 onPressed: (_) async {
+                  HapticFeedback.selectionClick();
                   await ref.read(dailyLogProvider.notifier).toggleTask(widget.task.id);
                 },
                 backgroundColor: Colors.transparent,
@@ -109,14 +111,15 @@ class _CheckboxTaskCardState extends ConsumerState<_CheckboxTaskCard>
           child: ScaleTransition(
             scale: _scaleAnim,
             child: GestureDetector(
-              onTapDown: (_) {},
+              onTapDown: (_) {
+                 HapticFeedback.selectionClick();
+              },
               onTapUp: (_) async {
                 await _toggle();
               },
-              onTapCancel: () {},
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOutCubic,
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.easeOutQuart,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
                   gradient: isCompleted
@@ -131,6 +134,13 @@ class _CheckboxTaskCardState extends ConsumerState<_CheckboxTaskCard>
                       : LinearGradient(
                           colors: [context.surfaceCard, context.surfaceCard],
                         ),
+                  boxShadow: isCompleted ? [
+                    BoxShadow(
+                      color: AppColors.sageGreen.withValues(alpha: 0.1),
+                      blurRadius: 15,
+                      spreadRadius: -2,
+                    )
+                  ] : null,
                   border: Border(
                     left: BorderSide(
                       color: isCompleted ? AppColors.sageGreen : color,
@@ -166,7 +176,7 @@ class _CheckboxTaskCardState extends ConsumerState<_CheckboxTaskCard>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             AnimatedDefaultTextStyle(
-                              duration: const Duration(milliseconds: 250),
+                              duration: const Duration(milliseconds: 300),
                               style: GoogleFonts.outfit(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -191,8 +201,8 @@ class _CheckboxTaskCardState extends ConsumerState<_CheckboxTaskCard>
                         ),
                       ),
                       AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        switchInCurve: Curves.elasticOut,
+                        duration: const Duration(milliseconds: 400),
+                        switchInCurve: Curves.backOut,
                         switchOutCurve: Curves.easeIn,
                         transitionBuilder: (child, animation) => ScaleTransition(
                           scale: animation,
@@ -229,7 +239,7 @@ class _CheckboxTaskCardState extends ConsumerState<_CheckboxTaskCard>
                   ),
                 ),
               ),
-            ),
+            ).animate(target: isCompleted ? 1 : 0).shimmer(duration: 1200.ms, color: AppColors.sageGreen.withValues(alpha: 0.1)),
           ),
         ),
       ),

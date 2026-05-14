@@ -248,11 +248,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     return Scaffold(
       extendBody: true,
       body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 350),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
+        duration: const Duration(milliseconds: 500),
+        switchInCurve: Curves.easeOutQuart,
+        switchOutCurve: Curves.easeInQuart,
         transitionBuilder: (child, animation) {
-          return FadeTransition(opacity: animation, child: child);
+          return FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: animation.drive(Tween(begin: 0.98, end: 1.0).chain(CurveTween(curve: Curves.easeOutQuart))),
+              child: child,
+            ),
+          );
         },
         child: KeyedSubtree(
           key: ValueKey(_currentIndex),

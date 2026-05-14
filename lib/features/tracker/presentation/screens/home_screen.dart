@@ -156,8 +156,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       child: DynamicTaskCard(task: task),
                                     )
                                         .animate()
-                                        .fadeIn(delay: (400 + (index * 50)).ms, duration: 400.ms)
-                                        .slideX(begin: 0.05, end: 0);
+                                        .fadeIn(delay: (300 + (index * 40)).ms, duration: 500.ms, curve: Curves.easeOutQuart)
+                                        .slideY(begin: 0.1, end: 0, curve: Curves.easeOutQuart);
                                   },
                                   childCount: tasks.length,
                                 ),
