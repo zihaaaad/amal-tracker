@@ -409,14 +409,6 @@ class _HomeHeader extends StatelessWidget {
       ),
     );
   }
-
-  IconData _getTimeIcon(int hour) {
-    if (hour < 6) return Icons.nights_stay_rounded;
-    if (hour < 12) return Icons.wb_sunny_rounded;
-    if (hour < 17) return Icons.wb_sunny_outlined;
-    if (hour < 21) return Icons.wb_twilight_rounded;
-    return Icons.bedtime_rounded;
-  }
 }
 
 // ─── Sync Indicator (Big Tech UX Pattern) ────────────────────────────────────

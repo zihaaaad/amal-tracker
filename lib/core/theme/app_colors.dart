@@ -25,6 +25,7 @@ class AppColors {
 
   // ─── Accents: Grounded Tones ──────────────────────
   static const Color warmAmber = Color(0xFFB45309); // Burnt Orange
+  static const Color warmAmberLight = Color(0xFFF59E0B); // Lighter Amber
   static const Color softCoral = Color(0xFF9F1239); // Deep Rose
   static const Color slateBlue = Color(0xFF334155); // Professional Slate
 
@@ -48,6 +49,14 @@ class AppColors {
   static const Color asrColor = Color(0xFF92400E); // Brown Orange
   static const Color maghribColor = Color(0xFF7C3AED); // Soft Purple
   static const Color ishaColor = Color(0xFF1E293B); // Deep Navy
+
+  // ─── Category Semantic Accessors (Compatibility) ──
+  static const Color categoryPrayer = Color(0xFF2D5A27);
+  static const Color categoryZikr = Color(0xFF1E40AF);
+  static const Color categoryHabit = Color(0xFFB45309);
+  static const Color categoryDont = Color(0xFF9F1239);
+  static const Color categoryWeekly = Color(0xFF334155);
+  static const Color categoryMonthly = Color(0xFF1E293B);
 
   // ─── Modern Glassmorphic Shaders ──────────────────
   static const Color glassBorder = Color(0x33FFFFFF);

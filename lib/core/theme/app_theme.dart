@@ -54,7 +54,7 @@ class AppTheme {
       ),
 
       // ─── Cards (Bespoke Professional Layering) ──────
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: isDark ? AppColors.darkSurfaceCard : AppColors.surfaceCard,
         elevation: 0,
         shape: RoundedRectangleBorder(
