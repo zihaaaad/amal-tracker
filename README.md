@@ -1,60 +1,52 @@
-# Amal Tracker Institutional Monorepo
+# As-Sunnah Amal Tracker
 
-This repository contains a multi-target Flutter platform developed for the As-Sunnah Foundation. It utilizes a monorepo architecture to manage both the employee-facing tracking application and the institutional management dashboard from a single codebase.
+![Build Status](https://github.com/zihaaaad/amal-tracker/actions/workflows/build_release.yml/badge.svg)
+![Version](https://img.shields.io/badge/version-1.0.0-2D5A27)
+![Platform](https://img.shields.io/badge/platform-Android-blue)
 
-## Project Structure
+A production-grade, institutional spiritual productivity platform engineered for the **As-Sunnah Foundation**. This monorepo delivers a dual-application ecosystem (Client & Admin) designed to foster spiritual excellence through data-driven tracking, professional oversight, and high-end "Zen" design principles.
 
-The platform is divided into two distinct application targets:
+## 🏛️ Project Architecture
 
-### 1. Amal Tracker (Client)
-*   Package ID: `com.amaltracker.app`
-*   Target: Employee spiritual growth and daily practice tracking.
-*   Features: Local-first data management, automated synchronization, and personal analytics.
-*   Build Command: `flutter build apk --flavor client -t lib/main_client.dart`
+The platform is architected as a **Symmetrical Monorepo**, sharing a hardened core while delivering two specialized binaries:
 
-### 2. Foundation Admin (Dashboard)
-*   Package ID: `com.amaltracker.admin`
-*   Target: Institutional oversight and resource management.
-*   Features: Biometric-gated access, organizational analytics, and task distribution management.
-*   Build Command: `flutter build apk --flavor admin -t lib/main_admin.dart`
+### 1. Amal Tracker (Employee Client)
+*   **Target**: Spiritual growth and habit tracking for foundation employees.
+*   **ID**: `com.amaltracker.app`
+*   **Highlights**: Local-first synchronization, "Zen" sensory layer, and personal analytics.
+*   **Build**: `flutter build apk --flavor client -t lib/main_client.dart`
 
-## Technical Overview
+### 2. Foundation Admin (Management)
+*   **Target**: Institutional oversight and organizational analytics.
+*   **ID**: `com.amaltracker.admin`
+*   **Highlights**: Biometric-gated access, departmental audits, and global announcements.
+*   **Build**: `flutter build apk --flavor admin -t lib/main_admin.dart`
 
-### Core Architecture
-*   Kernel Engine: Centralized initialization via the `AppCore` class located in `lib/app_core.dart`.
-*   Security: Role-based access control (RBAC) enforced at the application router and database layers.
-*   Synchronization: Local-first architecture using Isar Database with background synchronization to Supabase.
-*   CI/CD: Automated build pipeline via GitHub Actions for simultaneous APK generation.
+## 💎 Key Features
 
-### Directory Mapping
-```text
-lib/
-├── app_core.dart       # Central application kernel
-├── main_client.dart    # Employee app entry point
-├── main_admin.dart     # Admin app entry point
-├── core/               # Infrastructure, services, and themes
-├── features/           # Domain-specific business logic
-└── shared/             # Reusable UI components
+*   **Institutional Design**: Bespoke "Modern-Classic" aesthetic using a Slate & Forest Green palette.
+*   **Globalization**: Full support for English, Bengali (বাংলা), and Arabic (العربية) with native RTL support.
+*   **Offline-First Reliability**: Powered by Isar Database with atomic background synchronization to Supabase.
+*   **Hardened Security**: Role-based access control (RBAC) and biometric hardware gates for administrative data.
+*   **Automated Pipeline**: GitHub Actions CI/CD for simultaneous multi-target APK generation.
+
+## 🚀 Getting Started
+
+### 1. Environment Setup
+```bash
+flutter pub get
+dart run build_runner build --delete-conflicting-outputs
 ```
 
-## Setup and Development
+### 2. Development Execution
+*   **Client**: `flutter run --flavor client -t lib/main_client.dart`
+*   **Admin**: `flutter run --flavor admin -t lib/main_admin.dart`
 
-1.  Initialize environment:
-    ```bash
-    flutter pub get
-    ```
-2.  Generate data schemas:
-    ```bash
-    dart run build_runner build --delete-conflicting-outputs
-    ```
-3.  Execute development build:
-    *   Client: `flutter run --flavor client -t lib/main_client.dart`
-    *   Admin: `flutter run --flavor admin -t lib/main_admin.dart`
+## 📦 Deployment
 
-## Deployment
+Production binaries are automatically generated and released via GitHub Actions.
+*   **Artifacts**: `Amal_Tracker_Client.apk` and `Amal_Tracker_Admin.apk`.
+*   **Location**: Check the [Releases](https://github.com/zihaaaad/amal-tracker/releases) section for the latest institutional builds.
 
-The GitHub Actions workflow in `.github/workflows/build_release.yml` automates the release process. Every push to the main branch triggers the generation of two separate APK artifacts:
-*   `Amal_Tracker_Client.apk`
-*   `Amal_Tracker_Admin.apk`
-
-These are automatically attached to the corresponding GitHub Release.
+---
+*Developed for the As-Sunnah Foundation. Designed for excellence.*

@@ -1,25 +1,27 @@
-# Technical Roadmap: Amal Tracker Monorepo
+# Technical Roadmap: As-Sunnah Amal Tracker
 
-This document outlines the planned technical milestones for the platform. These objectives are tracked via GitHub Projects for institutional oversight.
+This document outlines the evolutionary path of the platform. Objectives are prioritized based on institutional impact and operational reliability.
 
-## Milestone 1: Core Monorepo Hardening
-- [x] Implementation of multi-target entry points.
-- [x] Establishment of binary-level security boundaries (Flavors).
-- [x] Automated dual-APK release pipeline.
-- [x] Reactive versioning integration.
+## ✅ Milestone 1: Platform Foundations
+- [x] Multi-target monorepo architecture (Client/Admin).
+- [x] Hardened Local-First Synchronization (Isar + Supabase).
+- [x] Internationalization (EN/BN/AR) with RTL support.
+- [x] Automated CI/CD pipeline for dual-binary generation.
+- [x] Bespoke "Modern-Classic" Institutional UI/UX.
 
-## Milestone 2: Institutional Intelligence
-- [ ] Cross-departmental performance comparison dashboard.
-- [ ] Historical trend analysis for organizational well-being.
-- [ ] Automated PDF report distribution for department heads.
-- [ ] Incremental streak calculation optimization.
+## 🛠️ Milestone 2: Institutional Intelligence (In Progress)
+- [ ] **Advanced Analytics**: Cross-departmental performance heatmaps.
+- [ ] **Automated Audits**: Scheduled PDF report generation and email dispatch.
+- [ ] **Engagement Layer**: Server-side spiritual nudges via FCM.
+- [ ] **Performance Pass**: O(n) optimization for historical log aggregation.
 
-## Milestone 3: Security and Compliance
-- [ ] Hardware security module (HSM) integration for admin credentials.
-- [ ] Formal data privacy audit and RLS policy verification.
-- [ ] Comprehensive integration testing suite for synchronization logic.
+## 🛡️ Milestone 3: Security & Enterprise Hardening
+- [ ] **Hardware Gating**: Biometric enforcement for sensitive data exports.
+- [ ] **Audit Logs**: Comprehensive tracking of administrative data access.
+- [ ] **Data Residency**: Verification of localized RLS policies and data encryption.
+- [ ] **Integration Suite**: 90%+ test coverage for synchronization edge cases.
 
-## Milestone 4: Operational Expansion
-- [ ] Localization support for regional foundation offices.
-- [ ] Institutional notification broadcasting system.
-- [ ] Donor-facing transparency portal (Third target application).
+## 🌍 Milestone 4: Operational Scaling
+- [ ] **Regional Locales**: Expanded support for regional dialects and foundation branches.
+- [ ] **Transparency Portal**: Dedicated dashboard for donors to view anonymized foundation impact.
+- [ ] **White-Labeling**: Structural refactoring for secondary foundation deployments.
