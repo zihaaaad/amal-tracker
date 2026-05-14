@@ -1,84 +1,83 @@
-# 🕌 Amal Tracker - Institutional Edition
+# 🕌 Amal Tracker - Institutional Monorepo
 
-[![Flutter](https://img.shields.io/badge/Flutter-3.11.5-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
+[![Flutter](https://img.shields.io/badge/Flutter-3.41.9-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
 [![Supabase](https://img.shields.io/badge/Supabase-Backend-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
 [![Isar](https://img.shields.io/badge/Isar-NoSQL-4285F4)](https://isar.dev)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Architecture](https://img.shields.io/badge/Arch-Monorepo-orange)](ARCHITECTURE.md)
 
-An elite, high-performance daily practice tracker built specifically for institutional use at the **As-Sunnah Foundation**. This platform enables employees to monitor their spiritual growth while providing administrators with high-level data insights into organizational well-being.
-
----
-
-## 💎 Premium Features
-
-- **🛡️ Enterprise Security:** Biometric-gated Admin Panel (`local_auth`) with hardware-backed security.
-- **⚡ Offline-First Architecture:** Powered by **Isar Database** for 0ms latency local reads.
-- **☁️ Professional Sync:** Advanced conflict resolution logic (Last-Write-Wins) using Supabase.
-- **📊 Deep Analytics:** Dynamic charts for streak tracking, completion rates, and historical growth.
-- **🎨 Elite UI/UX:** A bespoke design system utilizing custom theme extensions, glassmorphism, and haptic-driven interactions.
+An industrial-grade, multi-target platform engineered for the **As-Sunnah Foundation**. This repository utilizes a **Monorepo Architecture** to deliver two distinct, secure applications from a single source of truth.
 
 ---
 
-## 🏗️ Technical Architecture
+## 📱 The Dual-App Ecosystem
 
-The project follows a **Feature-First Domain-Driven Design (DDD)** approach, ensuring scalability and maintainability.
+This project delivers two specialized applications using **Flutter Flavors** and **Targeted Entry Points**:
+
+### 1. 👥 Amal Tracker (Employee App)
+*   **Package ID:** `com.amaltracker.app`
+*   **Purpose:** Personal spiritual growth tracking for foundation employees.
+*   **Key Features:** Glassmorphic UI, Offline-first tracking, Smart notifications, Personal analytics.
+*   **Build:** `flutter build apk --flavor client -t lib/main_client.dart`
+
+### 2. 👑 Foundation Admin (Management App)
+*   **Package ID:** `com.amaltracker.admin`
+*   **Purpose:** Institutional oversight and task management.
+*   **Key Features:** Biometric-gated access, Global participation analytics, Top performer leaderboards, Real-time task distribution.
+*   **Build:** `flutter build apk --flavor admin -t lib/main_admin.dart`
+
+---
+
+## 💎 Premium Engineering
+
+-   **🛡️ Hard Security Boundaries:** Role-based access control (RBAC) enforced at both the UI router level and the Database (Supabase RLS).
+-   **⚡ AppCore Engine:** A centralized initialization kernel (`AppCore`) that handles timezone logic, Isar hydration, and background service warm-up.
+-   **🔄 Atomic Sync Engine:** Hardened sync logic with conflict resolution and chunked upserts for extreme reliability.
+-   **📊 Institutional Intel:** Real-time metrics showing organizational "Pulse" and engagement trends.
+-   **🎨 Bespoke Design System:** Custom theme extensions for seamless light/dark transitions and haptic feedback integration.
+
+---
+
+## 🏗️ Monorepo Structure
 
 ```text
 lib/
-├── core/               # Shared logic, services, and themes
-│   ├── constants/      # App-wide constants
-│   ├── database/       # Isar schemas and initialization
-│   ├── services/       # Core singletons (Auth, Notifications, etc.)
-│   └── theme/          # Bespoke design system and color tokens
-├── features/           # Independent business modules
-│   ├── admin/          # Institutional management & oversight
-│   ├── analytics/      # Historical data processing & visualization
-│   ├── auth/           # Identity & institutional onboarding
-│   ├── settings/       # User preferences & cloud management
-│   └── tracker/        # Core daily tracking & log management
-└── shared/             # Reusable UI components & models
+├── app_core.dart       # The engine kernel (Shared Init/Router)
+├── main_client.dart    # Entry point for Employee App
+├── main_admin.dart     # Entry point for Admin App
+├── core/               # Infrastructure (Database, Auth, Themes)
+├── features/           # Domain Logic (Admin, Tracker, Analytics)
+└── shared/             # Atomic UI Components
 ```
 
 ---
 
-## 🛠️ Getting Started
+## 🛠️ Developer Setup
 
-### Prerequisites
-- Flutter SDK `^3.11.5`
-- A Supabase Project with our custom SQL schema applied.
-
-### Local Setup
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/zihaaaad/amal-tracker.git
-   ```
-2. **Install dependencies:**
-   ```bash
-   flutter pub get
-   ```
-3. **Generate local database schemas:**
-   ```bash
-   dart run build_runner build --delete-conflicting-outputs
-   ```
-4. **Configure environment:**
-   Update `lib/core/constants/app_constants.dart` with your Supabase credentials.
+1.  **Clone & Install:**
+    ```bash
+    git clone https://github.com/zihaaaad/amal-tracker.git
+    flutter pub get
+    ```
+2.  **Generate Assets:**
+    ```bash
+    dart run build_runner build --delete-conflicting-outputs
+    ```
+3.  **Run Client:**
+    ```bash
+    flutter run --flavor client -t lib/main_client.dart
+    ```
+4.  **Run Admin:**
+    ```bash
+    flutter run --flavor admin -t lib/main_admin.dart
+    ```
 
 ---
 
-## 🚢 Deployment & CI/CD
-We utilize a hardened **GitHub Actions** workflow for production delivery:
-- **Analyze:** Strict linting and analysis rules.
-- **Build:** Automated release APK generation.
-- **Release:** Continuous Deployment to GitHub Releases.
+## 🚢 CI/CD Pipeline
+Our GitHub Actions workflow is fully automated to build and release **both APKs simultaneously**. Every push to `main` generates:
+*   `Amal_Tracker_Client.apk`
+*   `Amal_Tracker_Admin.apk`
 
 ---
-
-## 🤝 Contributing
-As an enterprise application, we maintain high standards for code quality. Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for our architectural guidelines and PR process.
-
----
-
-## 📜 License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 **Engineered with precision for the As-Sunnah Foundation.**

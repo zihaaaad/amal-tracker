@@ -1,55 +1,59 @@
 # Amal Tracker - Enterprise Operations Manual
 
-## 📌 Project Overview
-Amal Tracker is a professional, institutional-grade application designed for the As-Sunnah Foundation. It utilizes a modern, offline-first architecture to ensure reliability in any connectivity environment.
+This manual provides operational guidance for managing and deploying the Amal Tracker Monorepo ecosystem.
 
 ---
 
-## 🏗️ Technical Architecture
-
-### 1. Database Layer
-- **Local (Isar Database):** High-performance local storage for daily logs and task definitions. All schema definitions are located in `lib/core/database/isar_schemas.dart`.
-- **Cloud (Supabase):** Handles identity management, global task synchronization, and institutional employee records.
-- **Conflict Resolution:** Implements a "Last-Write-Wins" strategy based on `updated_at` timestamps to ensure data integrity during offline/online transitions.
-
-### 2. Security Protocols
-- **Admin Access:** Protected by a biometric security gate (`local_auth`). Authentication is required every time the Admin Dashboard is accessed.
-- **Data Protection:** Supabase Row Level Security (RLS) ensures employees can only access their own logs while administrators can manage institutional data.
-
-### 3. Notifications Engine
-- **Precision Reminders:** Uses `NotificationService` with exact `zonedSchedule` for Fajr, Evening Check, and Sleep reminders.
-- **Background Logic:** Uses `Workmanager` for periodic health checks and streak alerts (Rule 5) to minimize battery impact.
+## 🏛️ Ecosystem Overview
+The Amal Tracker ecosystem consists of two distinct applications sharing a single backend and kernel:
+1.  **Amal Tracker (Client):** The daily spiritual tracker for employees.
+2.  **Foundation Admin:** The institutional oversight and analytics dashboard for management.
 
 ---
 
-## 🚀 Deployment Workflow
+## 🏗️ Technical Operations
 
-### 🛠️ Local Development
-To run the project locally with full feature support:
-1. `flutter pub get`
-2. `dart run build_runner build --delete-conflicting-outputs` (Required for Isar schemas)
-3. `flutter run`
+### 1. The Multi-Target Architecture
+The project uses **Targeted Entry Points** and **Build Flavors** to generate independent binaries.
+-   **Kernel Init:** All apps boot via `AppCore.init(AppMode mode)`.
+-   **Hardware Separation:** Each flavor uses a unique Package ID to ensure separate local storage and preference files.
 
-### 📦 CI/CD Pipeline (GitHub Actions)
-The repository is equipped with a hardened build pipeline in `.github/workflows/build_release.yml`:
-- **Automated Validation:** Runs `flutter analyze` and schema generation.
-- **Build Output:** Produces a release-ready APK artifact on every push to `main`.
-- **Android Hardening:** Automatically handles namespace injection for legacy plugins and forces `compileSdk 36`.
+### 2. Build & Deployment Commands
+Use these commands for local development and manual builds:
 
----
-
-## 🔐 Maintenance & Secrets
-For Production Play Store deployment, the following GitHub Secrets must be configured:
-- `SUPABASE_URL` & `SUPABASE_ANON_KEY`
-- `SIGNING_KEY` (Base64)
-- `KEY_STORE_PASSWORD`
-- `KEY_ALIAS`
+| Application | Command (Run) | Command (Build APK) |
+| :--- | :--- | :--- |
+| **Client** | `flutter run --flavor client -t lib/main_client.dart` | `flutter build apk --release --flavor client -t lib/main_client.dart` |
+| **Admin** | `flutter run --flavor admin -t lib/main_admin.dart` | `flutter build apk --release --flavor admin -t lib/main_admin.dart` |
 
 ---
 
-## 👨‍💻 Support & Scaling
-To add new institutional departments:
-1. Update the `amal_tasks` table in Supabase.
-2. The `AdminDashboardScreen` will automatically reflect changes for all employees via Riverpod's `ref.invalidate(tasksProvider)`.
+## 🛡️ Security & Access Control
 
-**Built with excellence by the Amal Tracker Engineering Team.**
+### Role-Based Access (RBAC)
+User roles are managed in the Supabase `profiles` table.
+-   **Role: 'employee'** - Can only access the Client app.
+-   **Role: 'admin'** - Can access both apps. Access to the Admin app is further gated by a mandatory biometric challenge.
+
+### Institutional Protection
+The system uses **Dynamic Auth Redirects**. The Client app redirects to `com.amaltracker.auth`, while the Admin app uses `com.amaltracker.admin.auth`. This prevents cross-app authentication leaks.
+
+---
+
+## 📊 Analytics & Reporting
+The Admin Dashboard provides real-time institutional metrics:
+-   **Engagement Pulse:** Calculated daily via the `AdminService` by aggregating `daily_logs` completion data.
+-   **Top Performers:** A rolling 7-day leaderboard based on cumulative points from prayers and habits.
+
+---
+
+## 🚀 CI/CD Pipeline
+The GitHub Actions pipeline (`.github/workflows/build_release.yml`) is the primary deployment method. It automatically:
+1.  Performs static analysis.
+2.  Generates code for Isar schemas.
+3.  Builds **both** the Client and Admin APKs.
+4.  Attaches the binaries to the GitHub Release.
+
+---
+
+**Institutional Integrity. Engineering Excellence.**

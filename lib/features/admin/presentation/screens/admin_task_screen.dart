@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../core/theme/theme_extension.dart';
-import '../../../../core/theme/app_colors.dart';
+import 'package:local_auth/local_auth.dart';
+import 'package:uuid/uuid.dart';
+
+import '../../../../core/services/admin_service.dart';
 import '../../../../core/services/profile_service.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/theme_extension.dart';
 import '../../../tracker/data/models/amal_task.dart';
 import '../../../tracker/data/services/task_service.dart';
 import '../../../tracker/providers/tasks_provider.dart';
-import 'package:local_auth/local_auth.dart';
-import 'package:uuid/uuid.dart';
-import 'package:flutter/services.dart';
-
-import '../../../../core/services/admin_service.dart';
 
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -22,8 +22,8 @@ class AdminDashboardScreen extends ConsumerStatefulWidget {
 
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  String _userSearchQuery = "";
-  String _selectedDept = "All";
+  String _userSearchQuery = '';
+  String _selectedDept = 'All';
   bool _isAuthenticating = true;
 
   @override

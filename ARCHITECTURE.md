@@ -1,49 +1,57 @@
-# System Architecture - Amal Tracker
+# System Architecture - Amal Tracker Monorepo
 
-This document provides a detailed overview of the design decisions and technical stack chosen for the Amal Tracker Institutional Edition.
-
----
-
-## 🏛️ Overall Pattern: Layered Feature-First
-
-The application is structured into four distinct layers to promote high cohesion and low coupling:
-
-1.  **Core Layer (`lib/core`):** Contains the "skeleton" of the app. Infrastructure, themes, and global services.
-2.  **Feature Layer (`lib/features`):** Each folder contains its own data, providers, and presentation logic. Features are modular.
-3.  **Shared Layer (`lib/shared`):** Universal UI components and models used across multiple features.
-4.  **Main Layer:** The entry point and global routing.
+This document details the industrial-grade architectural decisions behind the Amal Tracker Multi-Target platform.
 
 ---
 
-## 💾 Data Management Strategy
+## 🏛️ Monorepo Strategy: Shared Kernel, Specialized Targets
 
-### Hybrid Local-Cloud (Isar + Supabase)
-We use a "Local-First" synchronization model:
--   **Isar** acts as the Source of Truth (SoT) for the user interface.
--   **Supabase** acts as the remote persistence and synchronization layer.
--   **Why?** This ensures the app is 100% functional in poor network conditions (common during travel or in mosques) while keeping data safe in the cloud.
+The application is engineered as a **Single-Source Monorepo**. We share 95% of the codebase (models, database logic, themes) while branching into two specialized applications at the entry-level.
 
-### Conflict Resolution
-We implement a **Last-Write-Wins (LWW)** strategy using `updated_at` timestamps.
--   Before a local record is pushed to the cloud, we compare timestamps.
--   This prevents older data from a secondary device from overwriting fresh data on the primary device.
+### 1. The AppCore Kernel (`lib/app_core.dart`)
+Instead of a standard `main()`, we use a centralized `AppCore` class that acts as the application's lifecycle manager.
+-   **Engine Warm-up:** Handles parallel initialization of Timezones, Isar, and Supabase.
+-   **Asset Pre-warming:** Triggers the text rendering pipeline to eliminate jank during the first screen transition.
+-   **Global State Awareness:** Tracks whether the current instance is in `client` or `admin` mode.
 
----
-
-## 🎨 Design System
-
-Our UI is built on a **Custom Theme Extension** system. This allows us to access brand-specific properties directly from `BuildContext`.
-
--   **Semantic Colors:** Instead of generic `primaryColor`, we use `timeTint` (dynamic based on time of day) and `surfaceCard`.
--   **Micro-Interactions:** Every button press uses `HapticFeedback` to provide physical weight to the digital experience.
--   **Typography:** We use **Outfit** for headings to provide a modern, premium feel, and standard sans-serif for body text for readability.
+### 2. Multi-Target Entry Points
+-   `main_client.dart`: Initializes the kernel in Client mode. Points to the personal tracker.
+-   `main_admin.dart`: Initializes the kernel in Admin mode. Points directly to institutional oversight.
 
 ---
 
-## 🔒 Security Gatekeeping
+## 🔒 Security Gatekeeping & Hard Boundaries
 
--   **Client-Side:** The `AdminDashboardScreen` requires biometric authentication before instantiation.
--   **Server-Side:** Supabase **Row Level Security (RLS)** prevents users from reading logs belonging to others, while allowing authorized admins to see department-wide metrics.
+We implement **Defense-in-Depth** for the Admin target:
+1.  **Flavor Level:** Distinct Package IDs (`com.amaltracker.admin`) ensure physical separation of data folders on the device.
+2.  **App Level:** The `_AppRouter` performs a synchronous check against the `isAdmin` property of the live database profile.
+3.  **UI Level:** Biometric authentication (`local_auth`) is required every time the Admin Dashboard is accessed.
+4.  **Database Level:** Supabase RLS policies ensure that even if the app was compromised, the raw data remains inaccessible to unauthorized roles.
 
-**Document Version:** 1.0.0
-**Lead Engineer:** Antigravity (AI Architect)
+---
+
+## 💾 Institutional Data Flow
+
+### Atomic Sync Engine
+We use a "Local-First" model with Isar as the primary storage. The sync engine is hardened with:
+-   **Batch Processing:** Data is synced in chunks of 50 records to prevent payload timeouts.
+-   **Conflict Resolution:** Last-Write-Wins (LWW) strategy using nano-precision `updated_at` timestamps.
+-   **Sync Results:** The `SyncResult` object provides detailed feedback on success, failure, and network status to the UI.
+
+### Global Analytics Pipeline
+The Admin app utilizes a specialized `AdminService` that performs aggregate queries across the `profiles` and `daily_logs` tables to calculate:
+-   **Institutional Pulse:** Real-time engagement percentages.
+-   **Performance Rankings:** Weighted point calculation over a rolling 7-day window.
+
+---
+
+## 🎨 Professional Design System
+
+Our UI is built on a **Layered Theme Extension** architecture:
+-   **Context Awareness:** Colors are resolved via `context.timeTint` or `context.surface`, allowing for dynamic mood shifting based on the spiritual time of day.
+-   **Haptic Integration:** The system uses `selectionClick` and `mediumImpact` feedback to provide a tactile "premium" feel consistent with high-end institutional tools.
+
+---
+
+**Document Version:** 2.0.0
+**Architect:** Gemini CLI (Senior AI Engineer)

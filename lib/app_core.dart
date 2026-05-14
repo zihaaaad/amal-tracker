@@ -1,28 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
 import 'core/constants/app_constants.dart';
 import 'core/database/database_service.dart';
+import 'core/services/auth_service.dart';
 import 'core/services/background_service.dart';
 import 'core/services/notification_service.dart';
-import 'core/services/auth_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_extension.dart';
-
-import 'features/settings/providers/settings_provider.dart';
-import 'features/auth/providers/auth_provider.dart';
-import 'features/auth/presentation/screens/auth_screen.dart';
-import 'features/auth/presentation/screens/splash_screen.dart';
-import 'features/auth/presentation/screens/onboarding_screen.dart';
-import 'features/tracker/presentation/screens/home_screen.dart';
-import 'features/analytics/presentation/screens/analytics_screen.dart';
-import 'features/settings/screens/settings_screen.dart';
 import 'features/admin/presentation/screens/admin_task_screen.dart';
+import 'features/analytics/presentation/screens/analytics_screen.dart';
+import 'features/auth/presentation/screens/auth_screen.dart';
+import 'features/auth/presentation/screens/onboarding_screen.dart';
+import 'features/auth/presentation/screens/splash_screen.dart';
+import 'features/auth/providers/auth_provider.dart';
+import 'features/settings/providers/settings_provider.dart';
+import 'features/settings/screens/settings_screen.dart';
+import 'features/tracker/presentation/screens/home_screen.dart';
 
 enum AppMode { client, admin }
 
@@ -62,8 +61,8 @@ class AppCore {
       ),
     );
 
-    NotificationService.initialize().catchError((_) {});
-    BackgroundService.initialize().catchError((_) {});
+    await NotificationService.initialize().catchError((_) {});
+    await BackgroundService.initialize().catchError((_) {});
   }
 
   static Future<void> _prewarmAssets() async {
