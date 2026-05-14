@@ -3,57 +3,67 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../constants/app_constants.dart';
 import '../database/database_service.dart';
 import '../../features/tracker/data/services/task_service.dart';
+import '../../features/tracker/data/models/amal_task.dart';
 
-/// Background service for smart notifications using WorkManager.
-/// Runs completely offline — no API calls needed.
+/// Big-Tech Architecture: Task-Driven Background Notifications.
+/// Notifications are now derived from data rather than hardcoded logic.
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((taskName, inputData) async {
     try {
-      // Initialize notification plugin in background isolate
       final notificationsPlugin = FlutterLocalNotificationsPlugin();
       const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
       const initSettings = InitializationSettings(android: androidInit);
       await notificationsPlugin.initialize(initSettings);
 
-      // Initialize database
       final db = await DatabaseService.initialize();
       final now = DateTime.now();
       final todayLog = db.getTodayLog();
-
       final tasks = await TaskService.instance.getCachedTasks();
 
-      // ── Rule 4: Friday Reminder (12 PM Friday) ────
-      if (now.weekday == DateTime.friday && now.hour == 12) {
-        if (!todayLog.getBool('surahKahf')) {
-          await _showNotification(
-            notificationsPlugin,
-            id: 4,
-            title: 'Jumu\'ah Mubarak! 🕌',
-            body: 'Don\'t forget to recite Surah Al-Kahf today.',
-          );
+      // ── Strategic Shift: Metadata-Driven Notifications ────────────────
+      for (final task in tasks) {
+        // If it's a scheduled task (Weekly/Monthly) and active today
+        if (task.frequency != TaskFrequency.daily && _isTaskDueToday(task, now)) {
+          final isDone = task.inputType == TaskInputType.checkbox 
+              ? todayLog.getBool(task.id) 
+              : todayLog.getCounter(task.id) >= 5;
+
+          if (!isDone) {
+            await _showNotification(
+              notificationsPlugin,
+              id: task.id.hashCode,
+              title: 'Don\'t miss: ${task.title}',
+              body: task.subtitle ?? 'Keep up your ${task.category} goals!',
+            );
+          }
         }
       }
 
-      // ── Rule 5: Streak Alert (9 PM) ───────────────
+      // ── Intelligent Streak Guard (Only 9 PM) ────────────────────────
       if (now.hour == 21) {
         final streak = db.calculateStreak(tasks);
-        if (streak >= 3 && todayLog.calculateCompletion(tasks) >= 0.5) {
+        if (streak >= 3 && todayLog.calculateCompletion(tasks) < 0.5) {
           await _showNotification(
             notificationsPlugin,
-            id: 5,
-            title: 'Masha\'Allah! 🔥',
-            body:
-                'You\'re on a $streak-day streak! Keep up the amazing work.',
+            id: 999,
+            title: 'Keep the fire burning! 🔥',
+            body: 'You are on a $streak-day streak. Complete your tasks to keep it alive!',
           );
         }
       }
     } catch (e) {
-      // Silently fail in background — don't crash the app
+      // Background fails should never crash the host process
     }
     return Future.value(true);
   });
+}
+
+bool _isTaskDueToday(AmalTask task, DateTime now) {
+  if (task.activeDays != null && !task.activeDays!.contains(now.weekday)) return false;
+  if (task.frequency == TaskFrequency.monthly && now.day != 1) return false;
+  return true;
 }
 
 Future<void> _showNotification(
@@ -66,30 +76,20 @@ Future<void> _showNotification(
     android: AndroidNotificationDetails(
       AppConstants.notificationChannelId,
       AppConstants.notificationChannelName,
-      channelDescription: AppConstants.notificationChannelDesc,
       importance: Importance.high,
       priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
     ),
   );
   await plugin.show(id, title, body, details);
 }
 
-/// Initialize and register background tasks.
 class BackgroundService {
   static Future<void> initialize() async {
     await Workmanager().initialize(callbackDispatcher);
-
-    // Register periodic task (runs approximately every 1 hour)
     await Workmanager().registerPeriodicTask(
       AppConstants.periodicTaskName,
       AppConstants.backgroundTaskName,
       frequency: const Duration(hours: 1),
-      constraints: Constraints(
-        networkType: NetworkType.notRequired,
-        requiresBatteryNotLow: false,
-        requiresCharging: false,
-      ),
       existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
     );
   }

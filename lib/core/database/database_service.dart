@@ -224,21 +224,21 @@ class DatabaseService {
     await _isar.writeTxn(() => _isar.dailyLogEntrys.clear());
   }
 
-  Future<void> syncToCloud() async {
+  /// Enhanced Sync Engine: Implements Atomic Batching and Failure Tracking.
+  Future<SyncResult> syncToCloud() async {
     final client = Supabase.instance.client;
     final user = client.auth.currentUser;
-    if (user == null) return;
+    if (user == null) return SyncResult.unauthorized();
 
     final entries = await _isar.dailyLogEntrys.where().findAll();
-    if (entries.isEmpty) return;
+    if (entries.isEmpty) return SyncResult.success(0);
 
     // 1. Fetch cloud timestamps to compare
     List<dynamic> cloudData = [];
     try {
       cloudData = await client.from('daily_logs').select('date, updated_at').eq('user_id', user.id);
     } catch (e) {
-      debugPrint('Failed to fetch cloud timestamps: $e');
-      return;
+      return SyncResult.partial(0, 'Failed to fetch cloud timestamps: $e');
     }
 
     final cloudMap = { 
@@ -261,18 +261,22 @@ class DatabaseService {
       }
     }
 
-    if (logsToSync.isEmpty) return;
+    if (logsToSync.isEmpty) return SyncResult.success(0);
 
-    // Process in batches
+    // 3. Process in batches with atomic failure tracking
+    int syncedCount = 0;
     const batchSize = 50;
     for (int i = 0; i < logsToSync.length; i += batchSize) {
       final batch = logsToSync.sublist(i, (i + batchSize).clamp(0, logsToSync.length));
       try {
         await client.from('daily_logs').upsert(batch);
+        syncedCount += batch.length;
       } catch (e) {
         debugPrint('Sync batch $i failed: $e');
+        return SyncResult.partial(syncedCount, e.toString());
       }
     }
+    return SyncResult.success(syncedCount);
   }
 
   Future<void> restoreFromCloud() async {
@@ -313,4 +317,18 @@ class DatabaseService {
   List<String> getAllLogDates() {
     return _isar.dailyLogEntrys.where().findAllSync().map((e) => e.date).toList();
   }
+}
+
+/// Big Tech Standard: Structured Result Types for operations.
+class SyncResult {
+  final bool isSuccess;
+  final int count;
+  final String? error;
+  final bool isUnauthorized;
+
+  SyncResult({required this.isSuccess, required this.count, this.error, this.isUnauthorized = false});
+
+  factory SyncResult.success(int count) => SyncResult(isSuccess: true, count: count);
+  factory SyncResult.partial(int count, String error) => SyncResult(isSuccess: false, count: count, error: error);
+  factory SyncResult.unauthorized() => SyncResult(isSuccess: false, count: 0, isUnauthorized: true);
 }

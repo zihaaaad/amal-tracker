@@ -73,6 +73,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final allTasks = allTasksAsync.value ?? [];
     final completion = dailyLog.calculateCompletion(allTasks);
 
+    // Dynamic Sync Status (Big Tech UX Standard)
+    final syncStatus = ref.watch(syncStatusProvider);
+
     ref.listen(dailyLogProvider, (_, next) {
       final tasks = ref.read(tasksProvider).value ?? [];
       _checkCelebration(next.calculateCompletion(tasks));
@@ -96,6 +99,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           dateStr: dateStr,
                           quote: quote,
                           hour: now.hour,
+                          syncStatus: syncStatus,
                         ).animate().fadeIn(duration: 600.ms).slideY(begin: -0.1, end: 0, curve: Curves.easeOutCubic),
                       ),
 
@@ -197,11 +201,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  bool _isTaskRelevant(String taskId, TimeContext context) {
-    // Simple logic: tasks are dimmed if they belong to a time already passed
-    if (taskId.contains('fajr') && context != TimeContext.earlyMorning) return false;
-    if (taskId.contains('morning') && context.index > TimeContext.morning.index) return false;
-    if (taskId.contains('dhuhr') && context.index > TimeContext.afternoon.index) return false;
+  bool _isTaskRelevant(AmalTask task, TimeContext context) {
+    // Big Tech Excellence: Data-Driven Relevance
+    // If it's a specific frequency task, it's always relevant on its due day
+    if (task.frequency != TaskFrequency.daily) return true;
+
+    // Hardcoded logic for legacy IDs, but prepared for metadata expansion
+    final id = task.id.toLowerCase();
+    if (id.contains('fajr') && context.index > TimeContext.earlyMorning.index) return false;
+    if (id.contains('morning') && context.index > TimeContext.morning.index) return false;
+    if (id.contains('dhuhr') && context.index > TimeContext.afternoon.index) return false;
+    if (id.contains('asr') && context.index > TimeContext.evening.index) return false;
+    
     return true;
   }
 

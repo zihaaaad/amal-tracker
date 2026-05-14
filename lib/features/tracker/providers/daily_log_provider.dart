@@ -22,7 +22,7 @@ final databaseProvider = Provider<DatabaseService>((ref) {
 final dailyLogProvider =
     StateNotifierProvider<DailyLogNotifier, DailyLog>((ref) {
   final db = ref.watch(databaseProvider);
-  return DailyLogNotifier(db);
+  return DailyLogNotifier(db, ref);
 });
 
 /// Provider for the current streak count.

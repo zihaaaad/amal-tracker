@@ -106,8 +106,13 @@ class TaskService {
         id: item.id,
         category: item.category.name,
         title: item.title,
+        subtitle: item.subtitle,
         inputType: item.isCounter ? TaskInputType.counter : TaskInputType.checkbox,
         points: (item.id == 'fajr' || item.id == 'dhuhr' || item.id == 'asr' || item.id == 'maghrib' || item.id == 'isha') ? 5 : 1,
+        frequency: item.isWeekly ? TaskFrequency.weekly : (item.isMonthly ? TaskFrequency.monthly : TaskFrequency.daily),
+        activeDays: item.activeDays,
+        iconCode: item.icon.codePoint.toString(),
+        colorValue: item.color.value,
       )).toList();
       
       await _cacheTasks(localItems);
