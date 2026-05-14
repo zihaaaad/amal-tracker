@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/theme_extension.dart';
@@ -166,8 +167,8 @@ class _CheckboxTaskCardState extends ConsumerState<_CheckboxTaskCard>
                           children: [
                             AnimatedDefaultTextStyle(
                               duration: const Duration(milliseconds: 250),
-                              style: TextStyle(
-                                fontSize: 15,
+                              style: GoogleFonts.outfit(
+                                fontSize: 16,
                                 fontWeight: FontWeight.w600,
                                 color: isCompleted ? context.textMuted : context.textPrimary,
                                 decoration: isCompleted ? TextDecoration.lineThrough : null,

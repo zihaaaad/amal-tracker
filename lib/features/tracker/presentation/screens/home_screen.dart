@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/constants/quotes.dart';
@@ -339,8 +340,8 @@ class _HomeHeader extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       dateStr,
-                      style: TextStyle(
-                        fontSize: 22,
+                      style: GoogleFonts.outfit(
+                        fontSize: 24,
                         fontWeight: FontWeight.w900,
                         color: context.textPrimary,
                         letterSpacing: -0.5,

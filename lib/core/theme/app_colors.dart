@@ -1,75 +1,75 @@
 import 'package:flutter/material.dart';
 
-/// Premium Zen color palette for Amal Tracker.
-/// Inspired by Japanese minimalism and Islamic geometric art.
+/// Ultra-Premium 'Big Tech' Color Palette for Amal Tracker.
+/// Engineered for high contrast, OLED efficiency, and vibrant engagement.
 class AppColors {
   AppColors._();
 
-  // ─── Core Surfaces ─────────────────────────────────
-  static const Color surface = Color(0xFF0F0F0F);
-  static const Color surfaceElevated = Color(0xFF1A1A1A);
-  static const Color surfaceCard = Color(0xFF1E1E1E);
-  static const Color surfaceOverlay = Color(0xFF242424);
+  // ─── Core Surfaces (OLED Optimized) ────────────────
+  static const Color surface = Color(0xFF000000); // True OLED Black
+  static const Color surfaceElevated = Color(0xFF0A0A0A);
+  static const Color surfaceCard = Color(0xFF121212);
+  static const Color surfaceOverlay = Color(0xFF1E1E1E);
 
-  // ─── Primary: Sage Green (Completion) ──────────────
-  static const Color sageGreen = Color(0xFF7A907C);
-  static const Color sageGreenLight = Color(0xFFA8C4AA);
-  static const Color sageGreenDark = Color(0xFF5A6E5C);
-  static const Color sageGreenSubtle = Color(0x337A907C);
+  // ─── Primary: Electric Emerald (Completion) ────────
+  static const Color sageGreen = Color(0xFF10B981); // Vibrant Emerald
+  static const Color sageGreenLight = Color(0xFF34D399);
+  static const Color sageGreenDark = Color(0xFF059669);
+  static const Color sageGreenSubtle = Color(0x2610B981);
 
-  // ─── Accent: Warm Amber (Streaks/Achievements) ────
-  static const Color warmAmber = Color(0xFFD4A574);
-  static const Color warmAmberLight = Color(0xFFE8C49A);
-  static const Color warmAmberDark = Color(0xFFB88A5C);
+  // ─── Accent: Cyber Gold (Streaks/Achievements) ────
+  static const Color warmAmber = Color(0xFFF59E0B);
+  static const Color warmAmberLight = Color(0xFFFCD34D);
+  static const Color warmAmberDark = Color(0xFFD97706);
 
-  // ─── Alert: Soft Coral (Missed/Incomplete) ────────
-  static const Color softCoral = Color(0xFFC17C74);
-  static const Color softCoralLight = Color(0xFFD4A09A);
-  static const Color softCoralDark = Color(0xFF9E5E56);
+  // ─── Alert: Neon Rose (Missed/Incomplete) ────────
+  static const Color softCoral = Color(0xFFF43F5E);
+  static const Color softCoralLight = Color(0xFFFB7185);
+  static const Color softCoralDark = Color(0xFFE11D48);
 
-  // ─── Text ──────────────────────────────────────────
-  static const Color textPrimary = Color(0xFFF5F5F0);
-  static const Color textSecondary = Color(0xFF8A8A7C);
-  static const Color textMuted = Color(0xFF5A5A50);
-  static const Color textOnAccent = Color(0xFF0F0F0F);
+  // ─── Text (High Readability) ─────────────────────
+  static const Color textPrimary = Color(0xFFFFFFFF); // Pure White
+  static const Color textSecondary = Color(0xFFA1A1AA); // Crisp Silver
+  static const Color textMuted = Color(0xFF52525B); // Deep Zinc
+  static const Color textOnAccent = Color(0xFF000000);
 
-  // ─── Glassmorphism ────────────────────────────────
-  static const Color glassBorder = Color(0x14FFFFFF);
-  static const Color glassHighlight = Color(0x0AFFFFFF);
-  static const Color glassShadow = Color(0x40000000);
+  // ─── Structural Elements ─────────────────────────
+  static const Color glassBorder = Color(0x1AFFFFFF); // Subtle crisp border
+  static const Color glassHighlight = Color(0x0CFFFFFF);
+  static const Color glassShadow = Color(0x80000000);
 
-  // ─── Salah-Specific Colors ────────────────────────
-  static const Color fajrColor = Color(0xFF6B7FA3);       // Steel blue dawn
-  static const Color dhuhrColor = Color(0xFFD4A574);       // Warm amber noon
-  static const Color asrColor = Color(0xFFC4A066);         // Golden afternoon
-  static const Color maghribColor = Color(0xFFC17C74);     // Coral sunset
-  static const Color ishaColor = Color(0xFF6B6B8A);        // Twilight indigo
+  // ─── Salah-Specific Colors (Vibrant Palette) ─────
+  static const Color fajrColor = Color(0xFF3B82F6);       // Electric Blue
+  static const Color dhuhrColor = Color(0xFFF59E0B);      // Cyber Gold
+  static const Color asrColor = Color(0xFFF97316);        // Sunset Orange
+  static const Color maghribColor = Color(0xFFEC4899);    // Neon Pink
+  static const Color ishaColor = Color(0xFF8B5CF6);       // Deep Purple
 
   // ─── Category Colors ──────────────────────────────
-  static const Color categoryPrayer = Color(0xFF7A907C);
-  static const Color categoryZikr = Color(0xFF6B7FA3);
-  static const Color categoryHabit = Color(0xFFD4A574);
-  static const Color categoryDont = Color(0xFFC17C74);
-  static const Color categoryWeekly = Color(0xFF8A7FA3);
-  static const Color categoryMonthly = Color(0xFF7A9A8A);
+  static const Color categoryPrayer = Color(0xFF10B981);
+  static const Color categoryZikr = Color(0xFF3B82F6);
+  static const Color categoryHabit = Color(0xFFF59E0B);
+  static const Color categoryDont = Color(0xFFF43F5E);
+  static const Color categoryWeekly = Color(0xFF8B5CF6);
+  static const Color categoryMonthly = Color(0xFF06B6D4); // Cyan
 
-  // ─── Gradients ────────────────────────────────────
+  // ─── Modern Gradients ─────────────────────────────
   static const LinearGradient cardGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF1E1E1E), Color(0xFF161616)],
+    colors: [Color(0xFF18181B), Color(0xFF09090B)], // Zinc 900 to 950
   );
 
   static const LinearGradient completedGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF2A3F2C), Color(0xFF1E2E1F)],
+    colors: [Color(0xFF064E3B), Color(0xFF022C22)], // Emerald 900 to 950
   );
 
   static const LinearGradient headerGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Color(0xFF1A1A1A), Color(0xFF0F0F0F)],
+    colors: [Color(0xFF0A0A0A), Color(0xFF000000)],
   );
 
   static const LinearGradient progressGradient = LinearGradient(
