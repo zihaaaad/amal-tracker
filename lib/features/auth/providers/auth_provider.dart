@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/services/auth_service.dart';
 
 /// Streams every auth state change:
 ///   - Email login / signup

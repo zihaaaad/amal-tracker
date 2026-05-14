@@ -18,6 +18,7 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
+    final profileAsync = ref.watch(profileProvider);
 
     return Scaffold(
       backgroundColor: context.surface,
