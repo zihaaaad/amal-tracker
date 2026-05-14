@@ -1,80 +1,55 @@
 import 'package:flutter/material.dart';
 
-/// Ultra-Premium 'Big Tech' Color Palette for Amal Tracker.
-/// Engineered for high contrast, OLED efficiency, and vibrant engagement.
+/// Professional 'Modern-Classic' Color Palette for As-Sunnah Foundation.
+/// Stripping away 'AI-generated' vibrancy for a more grounded, institutional feel.
 class AppColors {
   AppColors._();
 
-  // ─── Core Surfaces (OLED Optimized) ────────────────
-  static const Color surface = Color(0xFF000000); // True OLED Black
-  static const Color surfaceElevated = Color(0xFF0A0A0A);
-  static const Color surfaceCard = Color(0xFF121212);
-  static const Color surfaceOverlay = Color(0xFF1E1E1E);
+  // ─── Core Surfaces (Layered Depth) ────────────────
+  static const Color surface = Color(0xFFFAFAFA); // Paper White
+  static const Color surfaceSecondary = Color(0xFFF1F5F9); // Slate 100
+  static const Color surfaceCard = Color(0xFFFFFFFF); // Pure White
+  static const Color surfaceElevated = Color(0xFFF8FAFC); // Slate 50
+  
+  // Dark Mode Core
+  static const Color darkSurface = Color(0xFF0F172A); // Slate 900
+  static const Color darkSurfaceSecondary = Color(0xFF1E293B); // Slate 800
+  static const Color darkSurfaceCard = Color(0xFF1E293B);
+  static const Color darkSurfaceElevated = Color(0xFF334155);
 
-  // ─── Primary: Electric Emerald (Completion) ────────
-  static const Color sageGreen = Color(0xFF10B981); // Vibrant Emerald
-  static const Color sageGreenLight = Color(0xFF34D399);
-  static const Color sageGreenDark = Color(0xFF059669);
-  static const Color sageGreenSubtle = Color(0x2610B981);
+  // ─── Primary: Institutional Green (The Foundation's Identity) ──
+  static const Color sageGreen = Color(0xFF2D5A27); // Deep Forest Green
+  static const Color sageGreenLight = Color(0xFF4C7C45);
+  static const Color sageGreenDark = Color(0xFF1B3B18);
+  static const Color sageGreenSubtle = Color(0x1A2D5A27);
 
-  // ─── Accent: Cyber Gold (Streaks/Achievements) ────
-  static const Color warmAmber = Color(0xFFF59E0B);
-  static const Color warmAmberLight = Color(0xFFFCD34D);
-  static const Color warmAmberDark = Color(0xFFD97706);
+  // ─── Accents: Grounded Tones ──────────────────────
+  static const Color warmAmber = Color(0xFFB45309); // Burnt Orange
+  static const Color softCoral = Color(0xFF9F1239); // Deep Rose
+  static const Color slateBlue = Color(0xFF334155); // Professional Slate
 
-  // ─── Alert: Neon Rose (Missed/Incomplete) ────────
-  static const Color softCoral = Color(0xFFF43F5E);
-  static const Color softCoralLight = Color(0xFFFB7185);
-  static const Color softCoralDark = Color(0xFFE11D48);
+  // ─── Text (Type-First Hierarchy) ──────────────────
+  static const Color textPrimary = Color(0xFF0F172A); // Slate 900
+  static const Color textSecondary = Color(0xFF475569); // Slate 600
+  static const Color textMuted = Color(0xFF94A3B8); // Slate 400
+  
+  // Dark Mode Text
+  static const Color darkTextPrimary = Color(0xFFF8FAFC);
+  static const Color darkTextSecondary = Color(0xFFCBD5E1);
+  static const Color darkTextMuted = Color(0xFF64748B);
 
-  // ─── Text (High Readability) ─────────────────────
-  static const Color textPrimary = Color(0xFFFFFFFF); // Pure White
-  static const Color textSecondary = Color(0xFFA1A1AA); // Crisp Silver
-  static const Color textMuted = Color(0xFF52525B); // Deep Zinc
-  static const Color textOnAccent = Color(0xFF000000);
+  // ─── Borders & Dividers ──────────────────────────
+  static const Color borderSubtle = Color(0xFFE2E8F0); // Slate 200
+  static const Color darkBorderSubtle = Color(0xFF334155); // Slate 700
 
-  // ─── Structural Elements ─────────────────────────
-  static const Color glassBorder = Color(0x1AFFFFFF); // Subtle crisp border
-  static const Color glassHighlight = Color(0x0CFFFFFF);
-  static const Color glassShadow = Color(0x80000000);
+  // ─── Salah Colors (Sophisticated Palette) ─────────
+  static const Color fajrColor = Color(0xFF1E40AF); // Deep Indigo
+  static const Color dhuhrColor = Color(0xFFB45309); // Burnt Orange
+  static const Color asrColor = Color(0xFF92400E); // Brown Orange
+  static const Color maghribColor = Color(0xFF7C3AED); // Soft Purple
+  static const Color ishaColor = Color(0xFF1E293B); // Deep Navy
 
-  // ─── Salah-Specific Colors (Vibrant Palette) ─────
-  static const Color fajrColor = Color(0xFF3B82F6);       // Electric Blue
-  static const Color dhuhrColor = Color(0xFFF59E0B);      // Cyber Gold
-  static const Color asrColor = Color(0xFFF97316);        // Sunset Orange
-  static const Color maghribColor = Color(0xFFEC4899);    // Neon Pink
-  static const Color ishaColor = Color(0xFF8B5CF6);       // Deep Purple
-
-  // ─── Category Colors ──────────────────────────────
-  static const Color categoryPrayer = Color(0xFF10B981);
-  static const Color categoryZikr = Color(0xFF3B82F6);
-  static const Color categoryHabit = Color(0xFFF59E0B);
-  static const Color categoryDont = Color(0xFFF43F5E);
-  static const Color categoryWeekly = Color(0xFF8B5CF6);
-  static const Color categoryMonthly = Color(0xFF06B6D4); // Cyan
-
-  // ─── Modern Gradients ─────────────────────────────
-  static const LinearGradient cardGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFF18181B), Color(0xFF09090B)], // Zinc 900 to 950
-  );
-
-  static const LinearGradient completedGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFF064E3B), Color(0xFF022C22)], // Emerald 900 to 950
-  );
-
-  static const LinearGradient headerGradient = LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-    colors: [Color(0xFF0A0A0A), Color(0xFF000000)],
-  );
-
-  static const LinearGradient progressGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [sageGreen, sageGreenLight],
-  );
+  // ─── Modern Glassmorphic Shaders ──────────────────
+  static const Color glassBorder = Color(0x33FFFFFF);
+  static const Color glassHighlight = Color(0x1AFFFFFF);
 }

@@ -121,34 +121,11 @@ class _CheckboxTaskCardState extends ConsumerState<_CheckboxTaskCard>
                 duration: const Duration(milliseconds: 400),
                 curve: Curves.easeOutQuart,
                 decoration: BoxDecoration(
+                  color: isCompleted ? context.surfaceSecondary : context.surfaceCard,
                   borderRadius: BorderRadius.circular(16),
-                  gradient: isCompleted
-                      ? LinearGradient(
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                          colors: [
-                            AppColors.sageGreen.withValues(alpha: 0.18),
-                            AppColors.sageGreenDark.withValues(alpha: 0.08),
-                          ],
-                        )
-                      : LinearGradient(
-                          colors: [context.surfaceCard, context.surfaceCard],
-                        ),
-                  boxShadow: isCompleted ? [
-                    BoxShadow(
-                      color: AppColors.sageGreen.withValues(alpha: 0.1),
-                      blurRadius: 15,
-                      spreadRadius: -2,
-                    )
-                  ] : null,
-                  border: Border(
-                    left: BorderSide(
-                      color: isCompleted ? AppColors.sageGreen : color,
-                      width: 3,
-                    ),
-                    top: BorderSide(color: context.dynamicGlassBorder),
-                    right: BorderSide(color: context.dynamicGlassBorder),
-                    bottom: BorderSide(color: context.dynamicGlassBorder),
+                  border: Border.all(
+                    color: isCompleted ? context.timeTint.withValues(alpha: 0.1) : context.borderSubtle,
+                    width: 1,
                   ),
                 ),
                 child: Padding(
@@ -160,14 +137,14 @@ class _CheckboxTaskCardState extends ConsumerState<_CheckboxTaskCard>
                         padding: const EdgeInsets.all(9),
                         decoration: BoxDecoration(
                           color: isCompleted
-                              ? AppColors.sageGreen.withValues(alpha: 0.2)
-                              : color.withValues(alpha: 0.12),
+                              ? context.timeTint.withValues(alpha: 0.1)
+                              : color.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
                           _categoryIcon(widget.task.category),
                           size: 18,
-                          color: isCompleted ? AppColors.sageGreenLight : color,
+                          color: isCompleted ? context.timeTint : color,
                         ),
                       ),
                       const SizedBox(width: 14),
@@ -183,17 +160,19 @@ class _CheckboxTaskCardState extends ConsumerState<_CheckboxTaskCard>
                                 color: isCompleted ? context.textMuted : context.textPrimary,
                                 decoration: isCompleted ? TextDecoration.lineThrough : null,
                                 decorationColor: context.textMuted,
+                                letterSpacing: -0.2,
                               ),
                               child: Text(widget.task.title),
                             ),
                             if (widget.task.category.isNotEmpty) ...[
                               const SizedBox(height: 2),
                               Text(
-                                _categoryLabel(widget.task.category),
+                                _categoryLabel(widget.task.category).toUpperCase(),
                                 style: TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 9,
                                   color: context.textMuted,
-                                  fontWeight: FontWeight.w400,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1,
                                 ),
                               ),
                             ],
@@ -213,23 +192,23 @@ class _CheckboxTaskCardState extends ConsumerState<_CheckboxTaskCard>
                                 key: const ValueKey('checked'),
                                 padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
-                                  color: AppColors.sageGreen.withValues(alpha: 0.2),
+                                  color: context.timeTint,
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
                                   Icons.check_rounded,
-                                  color: AppColors.sageGreenLight,
-                                  size: 16,
+                                  color: Colors.white,
+                                  size: 14,
                                 ),
                               )
                             : Container(
                                 key: const ValueKey('unchecked'),
-                                width: 24,
-                                height: 24,
+                                width: 22,
+                                height: 22,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: context.glassBorder.withValues(alpha: 0.5),
+                                    color: context.borderSubtle,
                                     width: 1.5,
                                   ),
                                 ),

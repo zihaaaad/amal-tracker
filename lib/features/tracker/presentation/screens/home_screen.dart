@@ -343,119 +343,66 @@ class _HomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        gradient: context.headerGradient,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-        border: Border.all(
-          color: context.timeTint.withValues(alpha: 0.1),
-        ),
-      ),
+      margin: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          'AS-SUNNAH FOUNDATION',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.5,
-                            color: context.timeTint.withValues(alpha: 0.5),
-                          ),
-                        ),
-                        if (syncStatus != null) ...[
-                          const SizedBox(width: 8),
-                          _SyncIndicator(status: syncStatus!),
-                        ],
-                      ],
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'AS-SUNNAH FOUNDATION',
+                    style: GoogleFonts.outfit(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 2,
+                      color: context.timeTint.withValues(alpha: 0.6),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      greeting,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: context.timeTint,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.2,
-                      ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    greeting,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: context.textSecondary,
+                      fontWeight: FontWeight.w500,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      dateStr,
-                      style: GoogleFonts.outfit(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w900,
-                        color: context.textPrimary,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: context.timeTint.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  _getTimeIcon(hour),
-                  color: context.timeTint,
-                  size: 24,
-                ),
-              ),
+              if (syncStatus != null) _SyncIndicator(status: syncStatus!),
             ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            dateStr,
+            style: GoogleFonts.outfit(
+              fontSize: 32,
+              fontWeight: FontWeight.w800,
+              color: context.textPrimary,
+              letterSpacing: -1,
+            ),
           ),
           const SizedBox(height: 20),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: context.surfaceCard.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: context.glassBorder.withValues(alpha: 0.5),
-              ),
+              color: context.surfaceSecondary,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: context.borderSubtle),
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.format_quote_rounded,
-                  color: context.timeTint.withValues(alpha: 0.3),
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    quote,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: context.textSecondary.withValues(alpha: 0.7), // Lower opacity for hierarchy
-                      fontWeight: FontWeight.w500,
-                      fontStyle: FontStyle.italic,
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-              ],
+            child: Text(
+              quote,
+              style: TextStyle(
+                fontSize: 13,
+                color: context.textSecondary,
+                height: 1.5,
+                fontStyle: FontStyle.italic,
+              ),
             ),
           ),
         ],
