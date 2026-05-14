@@ -208,12 +208,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // If it's a specific frequency task, it's always relevant on its due day
     if (task.frequency != TaskFrequency.daily) return true;
 
-    // Hardcoded logic for legacy IDs, but prepared for metadata expansion
-    final id = task.id.toLowerCase();
-    if (id.contains('fajr') && context.index > TimeContext.earlyMorning.index) return false;
-    if (id.contains('morning') && context.index > TimeContext.morning.index) return false;
-    if (id.contains('dhuhr') && context.index > TimeContext.afternoon.index) return false;
-    if (id.contains('asr') && context.index > TimeContext.evening.index) return false;
+    // Use title for relevance check since IDs are now UUIDs
+    final titleSearch = task.title.toLowerCase();
+    if (titleSearch.contains('fajr') && context.index > TimeContext.earlyMorning.index) return false;
+    if (titleSearch.contains('morning') && context.index > TimeContext.morning.index) return false;
+    if (titleSearch.contains('dhuhr') && context.index > TimeContext.afternoon.index) return false;
+    if (titleSearch.contains('asr') && context.index > TimeContext.evening.index) return false;
     
     return true;
   }

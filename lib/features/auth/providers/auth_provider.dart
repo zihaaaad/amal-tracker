@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/services/auth_service.dart';
@@ -33,6 +34,11 @@ final profileProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
     AuthService.instance.clearProfile();
     return null;
   }
-  await AuthService.instance.refreshProfile();
-  return AuthService.instance.currentProfile;
+  try {
+    await AuthService.instance.refreshProfile();
+    return AuthService.instance.currentProfile;
+  } catch (e) {
+    debugPrint('Profile Provider Error: $e');
+    return null; // Fallback to null instead of throwing and hanging the router
+  }
 });

@@ -29,9 +29,8 @@ class AuthService {
     final metadata = user.userMetadata ?? {};
     
     if (metadata['role'] == 'admin') return true;
-
-    // 3. Institutional Email Domain Protection
-    return user.email?.endsWith('@assunnahfoundation.org') == true;
+    
+    return false;
   }
 
   /// Returns true if the user has completed their institutional onboarding.

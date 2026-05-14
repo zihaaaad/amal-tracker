@@ -74,22 +74,31 @@ class DatabaseService {
   static Future<DatabaseService> initialize() async {
     if (instance._initialized) return instance;
     
-    final dir = await getApplicationDocumentsDirectory();
-    instance._isar = await Isar.open(
-      [DailyLogEntrySchema, TaskEntrySchema],
-      directory: dir.path,
-    );
-    instance._prefs = await SharedPreferences.getInstance();
-    instance._initialized = true;
-    
-    // Run migration in background to avoid blocking the splash screen
-    unawaited(compute(_migrateInBackground, {
-      'keys': instance._prefs.getKeys().where((k) => k.startsWith('log_')).toList(),
-      'migrated': instance._prefs.getBool('isar_migrated') ?? false,
-    }).then((_) {}).catchError((_) {}));
-    
-    // Also run synchronously for small datasets
-    await instance._migrateFromPrefs();
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      instance._isar = await Isar.open(
+        [DailyLogEntrySchema, TaskEntrySchema],
+        directory: dir.path,
+      );
+      instance._prefs = await SharedPreferences.getInstance();
+      instance._initialized = true;
+      
+      // Run migration in background to avoid blocking the splash screen
+      unawaited(compute(_migrateInBackground, {
+        'keys': instance._prefs.getKeys().where((k) => k.startsWith('log_')).toList(),
+        'migrated': instance._prefs.getBool('isar_migrated') ?? false,
+      }).then((_) {}).catchError((e) {
+        debugPrint('Background migration failed: $e');
+      }));
+      
+      // Also run synchronously for small datasets (safe check)
+      await instance._migrateFromPrefs();
+    } catch (e) {
+      debugPrint('Database initialization error: $e');
+      // We still mark as initialized if we caught an error to avoid infinite retry hangs,
+      // but the app might be in a degraded state.
+      instance._initialized = true; 
+    }
     
     return instance;
   }
@@ -233,13 +242,30 @@ class DatabaseService {
     final user = client.auth.currentUser;
     if (user == null) return SyncResult.unauthorized();
 
-    final entries = await _isar.dailyLogEntrys.where().findAll();
-    if (entries.isEmpty) return SyncResult.success(0);
+    final lastSyncStr = _prefs.getString('last_sync_timestamp');
+    final lastSync = lastSyncStr != null ? DateTime.parse(lastSyncStr) : null;
+
+    final allEntries = await _isar.dailyLogEntrys.where().findAll();
+    if (allEntries.isEmpty) return SyncResult.success(0);
+
+    // Filter local logs that are newer than lastSync
+    final logsToSyncLocal = lastSync == null 
+        ? allEntries 
+        : allEntries.where((e) => e.updatedAt.isAfter(lastSync)).toList();
 
     // 1. Fetch cloud timestamps to compare
     List<dynamic> cloudData = [];
     try {
-      cloudData = await client.from('daily_logs').select('date, updated_at').eq('user_id', user.id);
+      if (lastSync != null) {
+        cloudData = await client.from('daily_logs')
+            .select('date, updated_at')
+            .eq('user_id', user.id)
+            .gte('updated_at', lastSync.toIso8601String());
+      } else {
+        cloudData = await client.from('daily_logs')
+            .select('date, updated_at')
+            .eq('user_id', user.id);
+      }
     } catch (e) {
       return SyncResult.partial(0, 'Failed to fetch cloud timestamps: $e');
     }
@@ -252,7 +278,7 @@ class DatabaseService {
     final logsToSync = <Map<String, dynamic>>[];
 
     // 2. Only push logs where local is newer than cloud
-    for (final e in entries) {
+    for (final e in logsToSyncLocal) {
       final cloudUpdatedAt = cloudMap[e.date];
       if (cloudUpdatedAt == null || e.updatedAt.isAfter(cloudUpdatedAt)) {
         logsToSync.add({
@@ -264,7 +290,10 @@ class DatabaseService {
       }
     }
 
-    if (logsToSync.isEmpty) return SyncResult.success(0);
+    if (logsToSync.isEmpty) {
+      await _prefs.setString('last_sync_timestamp', DateTime.now().toIso8601String());
+      return SyncResult.success(0);
+    }
 
     // 3. Process in batches with atomic failure tracking
     int syncedCount = 0;
@@ -279,6 +308,8 @@ class DatabaseService {
         return SyncResult.partial(syncedCount, e.toString());
       }
     }
+    
+    await _prefs.setString('last_sync_timestamp', DateTime.now().toIso8601String());
     return SyncResult.success(syncedCount);
   }
 
@@ -287,9 +318,24 @@ class DatabaseService {
     final user = client.auth.currentUser;
     if (user == null) return;
 
+    final lastSyncStr = _prefs.getString('last_sync_timestamp');
+    final lastSync = lastSyncStr != null ? DateTime.parse(lastSyncStr) : null;
+
     try {
-      final response = await client.from('daily_logs').select().eq('user_id', user.id);
+      final dynamic response;
+      if (lastSync != null) {
+        response = await client.from('daily_logs')
+            .select()
+            .eq('user_id', user.id)
+            .gte('updated_at', lastSync.toIso8601String());
+      } else {
+        response = await client.from('daily_logs')
+            .select()
+            .eq('user_id', user.id);
+      }
+      
       final List<dynamic> data = response as List<dynamic>;
+      if (data.isEmpty) return;
 
       await _isar.writeTxn(() async {
         for (final item in data) {

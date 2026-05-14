@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -67,6 +68,11 @@ class AppCore {
 
   static Future<void> _prewarmAssets() async {
     TextPainter(textDirection: TextDirection.ltr).layout();
+    try {
+      await GoogleFonts.pendingFonts([
+        GoogleFonts.outfit(),
+      ]).timeout(const Duration(seconds: 2));
+    } catch (_) {}
   }
 
   static Future<void> _initTimezone() async {
@@ -99,65 +105,45 @@ class AmalTrackerApp extends ConsumerWidget {
   }
 }
 
-class _AppRouter extends ConsumerStatefulWidget {
+class _AppRouter extends ConsumerWidget {
   final AppMode mode;
   const _AppRouter({required this.mode});
 
   @override
-  ConsumerState<_AppRouter> createState() => _AppRouterState();
-}
-
-class _AppRouterState extends ConsumerState<_AppRouter> {
-  bool _ready = false;
-  bool _checkingProfile = false;
-  bool _profileChecked = false;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => _ready = true);
-    });
-  }
-
-  Future<void> _checkProfile() async {
-    if (_checkingProfile || _profileChecked) return;
-    _checkingProfile = true;
-    if (mounted) setState(() {});
-    
-    await AuthService.instance.refreshProfile();
-    _checkingProfile = false;
-    _profileChecked = true;
-    if (mounted) setState(() {});
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final authAsync = ref.watch(authStateProvider);
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 1. Monitor Auth State
     final session = ref.watch(sessionProvider);
+    final authAsync = ref.watch(authStateProvider);
 
-    if (!_ready || authAsync.isLoading) {
+    // 2. Monitor Profile State (Source of Truth)
+    final profileAsync = ref.watch(profileProvider);
+
+    // Show splash if we have a session but profile isn't loaded yet
+    final isProfileLoading = session != null && profileAsync.isLoading;
+
+    if (isProfileLoading) {
       return const SplashScreen();
     }
 
+    // 3. Routing Logic
     if (session != null) {
-      if (!_profileChecked && !_checkingProfile) {
-        _checkProfile();
-        return const SplashScreen();
-      }
-      
-      if (_checkingProfile) {
-        return const SplashScreen();
-      }
-
+      // Profile is loaded here because profileAsync is not loading
       if (!AuthService.instance.isProfileComplete) {
         return const OnboardingScreen();
       }
 
-      // ── Hard Boundary Logic ────────────────────────────────────────
-      if (widget.mode == AppMode.admin) {
+      // Hard Boundary Logic for Admin Target
+      if (mode == AppMode.admin) {
         if (!AuthService.instance.isAdmin) {
-          return const Scaffold(body: Center(child: Text('Unauthorized Access')));
+          return const Scaffold(
+            body: Center(
+              child: Text(
+                'Unauthorized Access\nAdmin Role Required',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          );
         }
         return const AdminDashboardScreen();
       }
@@ -165,10 +151,7 @@ class _AppRouterState extends ConsumerState<_AppRouter> {
       return const MainNavigationScreen();
     }
 
-    if (_profileChecked) {
-      _profileChecked = false;
-    }
-
+    // No session -> Auth Screen
     return const AuthScreen();
   }
 }
