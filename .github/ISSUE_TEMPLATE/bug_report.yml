@@ -1,0 +1,49 @@
+name: 🐛 Bug Report
+description: Create a report to help us improve.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Also tell us, what did you expect to happen?
+      placeholder: Tell us what you see!
+    validations:
+      required: true
+  - type: dropdown
+    id: application-target
+    attributes:
+      label: Application Target
+      description: Which app were you using?
+      options:
+        - Amal Tracker (Client)
+        - Foundation Admin
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we make this happen ourselves?
+      placeholder: |
+        1. Open '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+        4. See error
+    validations:
+      required: true
+  - type: input
+    id: flutter-version
+    attributes:
+      label: Flutter Version
+      description: Result of `flutter --version`
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+      render: shell

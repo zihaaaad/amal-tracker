@@ -174,10 +174,11 @@ class SettingsScreen extends ConsumerWidget {
           ),
           
           const SizedBox(height: 48),
-          
+
           // Branded About Section
-          _buildAboutCard(context),
+          _buildAboutCard(context, ref),
           const SizedBox(height: 120), // Bottom padding for floating nav
+
         ],
       ),
     );
@@ -277,7 +278,9 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildAboutCard(BuildContext context) {
+  Widget _buildAboutCard(BuildContext context, WidgetRef ref) {
+    final packageInfo = ref.watch(packageInfoProvider);
+    
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -312,9 +315,13 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            'Institutional Edition • v1.0.0',
-            style: TextStyle(color: context.textMuted, fontSize: 12, fontWeight: FontWeight.w600),
+          packageInfo.when(
+            data: (info) => Text(
+              'Institutional Edition • v${info.version}+${info.buildNumber}',
+              style: TextStyle(color: context.textMuted, fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const Text('Institutional Edition'),
           ),
           const SizedBox(height: 12),
           Text(
