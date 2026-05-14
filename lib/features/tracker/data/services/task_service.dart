@@ -1,9 +1,12 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:async';
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:flutter/foundation.dart';
-import '../models/amal_task.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../../../core/constants/salah_data.dart';
+import '../models/amal_task.dart';
 
 class TaskService {
   TaskService._();
@@ -45,7 +48,7 @@ class TaskService {
     final cached = await getCachedTasks();
     
     // Background refresh
-    _refreshCache(); 
+    unawaited(_refreshCache()); 
 
     return cached.isNotEmpty ? cached : await _fetchFromNetwork();
   }
@@ -112,7 +115,7 @@ class TaskService {
         frequency: item.isWeekly ? TaskFrequency.weekly : (item.isMonthly ? TaskFrequency.monthly : TaskFrequency.daily),
         activeDays: item.activeDays,
         iconCode: item.icon.codePoint.toString(),
-        colorValue: item.color.value,
+        colorValue: item.color.toARGB32(),
       )).toList();
       
       await _cacheTasks(localItems);

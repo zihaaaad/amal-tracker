@@ -197,8 +197,8 @@ class _ProgressRingState extends State<ProgressRing>
     if (p >= 1.0) return 'MashaAllah!\nPure excellence ✨';
     if (p >= 0.8) return 'So close!\nFinish strong 💪';
     if (p >= 0.5) return 'Over halfway!\nKeep going 🚀';
-    if (p >= 0.2) return "Great start!\nOne step at a time";
-    return "Ready to track?\nBismillah! 🌙";
+    if (p >= 0.2) return 'Great start!\nOne step at a time';
+    return 'Ready to track?\nBismillah! 🌙';
   }
 }
 

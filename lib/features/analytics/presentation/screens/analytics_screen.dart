@@ -1,16 +1,17 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:printing/printing.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:printing/printing.dart';
+
+import '../../../../core/database/database_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/theme_extension.dart';
-import '../../../tracker/providers/daily_log_provider.dart';
-import '../../../../core/database/database_service.dart';
 import '../../../pdf_report/pdf_generator.dart';
-import '../../../tracker/providers/tasks_provider.dart';
 import '../../../tracker/data/models/amal_task.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+import '../../../tracker/providers/daily_log_provider.dart';
+import '../../../tracker/providers/tasks_provider.dart';
 
 class AnalyticsScreen extends ConsumerStatefulWidget {
   const AnalyticsScreen({super.key});
@@ -237,7 +238,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
               getTooltipItems: (spots) => spots
                   .map((s) => LineTooltipItem(
                         'Day ${s.x.toInt() + 1}\n${s.y.round()}%',
-                        TextStyle(
+                        const TextStyle(
                           color: AppColors.sageGreenLight,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -390,9 +391,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
       BuildContext context, List<DailyLog> logs, List<AmalTask> tasks) {
     if (logs.isEmpty) return const SizedBox.shrink();
 
-    String insightTitle = "Steady Progress";
+    String insightTitle = 'Steady Progress';
     String insightText =
-        "Your consistency is forming a beautiful pattern. Keep going!";
+        'Your consistency is forming a beautiful pattern. Keep going!';
     IconData insightIcon = Icons.auto_awesome_rounded;
 
     final fajrTask =
@@ -402,14 +403,14 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
       final fajrLogs = logs.where((l) => l.getBool(fajrTask.id)).length;
       final fajrRatio = fajrLogs / totalDays;
       if (fajrRatio > 0.8) {
-        insightTitle = "Early Riser Excellence";
+        insightTitle = 'Early Riser Excellence';
         insightText =
-            "Your Fajr consistency is elite. This morning discipline is the foundation of a successful day.";
+            'Your Fajr consistency is elite. This morning discipline is the foundation of a successful day.';
         insightIcon = Icons.wb_twilight_rounded;
       } else if (fajrRatio < 0.4 && totalDays > 3) {
-        insightTitle = "Morning Opportunity";
+        insightTitle = 'Morning Opportunity';
         insightText =
-            "Try focusing on Fajr this week. A strong start at dawn often doubles your productivity.";
+            'Try focusing on Fajr this week. A strong start at dawn often doubles your productivity.';
         insightIcon = Icons.wb_sunny_rounded;
       }
     }

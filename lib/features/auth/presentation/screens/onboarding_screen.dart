@@ -49,7 +49,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         _selectedDept == null || 
         _idController.text.isEmpty || 
         _selectedSubInst == null) {
-      HapticFeedback.vibrate();
+      await HapticFeedback.vibrate();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please complete all institutional fields')),
       );
@@ -57,7 +58,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
 
     setState(() => _isLoading = true);
-    HapticFeedback.mediumImpact();
+    await HapticFeedback.mediumImpact();
     
     try {
       await AuthService.instance.updateProfile(

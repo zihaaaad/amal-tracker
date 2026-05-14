@@ -1,16 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:local_auth/local_auth.dart';
+
+import '../../../../core/database/database_service.dart';
+import '../../../../core/services/auth_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/theme_extension.dart';
-import '../../../../core/database/database_service.dart';
+import '../../admin/presentation/screens/admin_task_screen.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../tracker/providers/daily_log_provider.dart';
 import '../providers/settings_provider.dart';
-import '../../../../core/services/auth_service.dart';
-import '../../admin/presentation/screens/admin_task_screen.dart';
-import 'package:local_auth/local_auth.dart';
-import '../../auth/providers/auth_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -82,7 +85,7 @@ class SettingsScreen extends ConsumerWidget {
                       title: 'Admin Dashboard',
                       subtitle: 'Manage Foundation tasks & employees',
                       onTap: () async {
-                        HapticFeedback.mediumImpact();
+                        await HapticFeedback.mediumImpact();
                         final auth = LocalAuthentication();
                         try {
                           final canAuth = await auth.canCheckBiometrics || await auth.isDeviceSupported();
@@ -92,23 +95,23 @@ class SettingsScreen extends ConsumerWidget {
                               options: const AuthenticationOptions(stickyAuth: true, biometricOnly: false),
                             );
                             if (didAuth && context.mounted) {
-                              Navigator.push(
+                              unawaited(Navigator.push(
                                 context,
                                 MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
-                              );
+                              ));
                             }
                           } else if (context.mounted) {
-                            Navigator.push(
+                            unawaited(Navigator.push(
                               context,
                               MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
-                            );
+                            ));
                           }
                         } catch (_) {
                           if (context.mounted) {
-                            Navigator.push(
+                            unawaited(Navigator.push(
                               context,
                               MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
-                            );
+                            ));
                           }
                         }
                       },
@@ -120,7 +123,7 @@ class SettingsScreen extends ConsumerWidget {
               return const SizedBox.shrink();
             },
             loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
           ),
 
           // Account & Sync
@@ -130,7 +133,7 @@ class SettingsScreen extends ConsumerWidget {
             title: 'Cloud Backup',
             subtitle: 'Sync your progress now',
             onTap: () async {
-              HapticFeedback.mediumImpact();
+              await HapticFeedback.mediumImpact();
               try {
                 await DatabaseService.instance.syncToCloud();
                 if (context.mounted) {
@@ -154,7 +157,7 @@ class SettingsScreen extends ConsumerWidget {
             iconColor: AppColors.softCoral,
             titleColor: AppColors.softCoral,
             onTap: () async {
-              HapticFeedback.heavyImpact();
+              await HapticFeedback.heavyImpact();
               await AuthService.instance.signOut();
             },
           ),
@@ -321,7 +324,7 @@ class SettingsScreen extends ConsumerWidget {
               style: TextStyle(color: context.textMuted, fontSize: 12, fontWeight: FontWeight.w600),
             ),
             loading: () => const SizedBox.shrink(),
-            error: (_, __) => const Text('Institutional Edition'),
+            error: (_, _) => const Text('Institutional Edition'),
           ),
           const SizedBox(height: 12),
           Text(

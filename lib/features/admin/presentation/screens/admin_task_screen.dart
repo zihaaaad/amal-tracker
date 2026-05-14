@@ -162,11 +162,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
           final matchesSearch = e.fullName.toLowerCase().contains(_userSearchQuery.toLowerCase()) || 
                                e.email.toLowerCase().contains(_userSearchQuery.toLowerCase()) ||
                                e.employeeId.contains(_userSearchQuery);
-          final matchesDept = _selectedDept == "All" || e.department == _selectedDept;
+          final matchesDept = _selectedDept == 'All' || e.department == _selectedDept;
           return matchesSearch && matchesDept;
         }).toList();
 
-        final depts = ["All", ...all.map((e) => e.department).toSet()];
+        final depts = ['All', ...all.map((e) => e.department).toSet()];
 
         return Column(
           children: [

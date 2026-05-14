@@ -1,9 +1,11 @@
 import 'dart:typed_data';
+
+import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:intl/intl.dart';
-import '../tracker/data/models/amal_task.dart';
+
 import '../../../core/database/database_service.dart';
+import '../tracker/data/models/amal_task.dart';
 
 class PdfGenerator {
   static Future<Uint8List> generateMonthlyReport(
@@ -70,7 +72,7 @@ class PdfGenerator {
             pw.SizedBox(height: 4),
             pw.Text(
               'Monthly Progress Report | $monthName',
-              style: pw.TextStyle(fontSize: 12, color: PdfColors.grey700),
+              style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700),
             ),
           ],
         ),
@@ -143,13 +145,13 @@ class PdfGenerator {
 
   static pw.Widget _buildInsights(List<DailyLog> logs, List<AmalTask> tasks) {
     // Basic logic for PDF insights
-    String text = "You have shown consistent commitment this month. Your spiritual journey is reflected in the steady discipline across your daily tasks.";
+    String text = 'You have shown consistent commitment this month. Your spiritual journey is reflected in the steady discipline across your daily tasks.';
     
     final fajrTask = tasks.where((t) => t.title.toLowerCase().contains('fajr')).firstOrNull;
     if (fajrTask != null) {
       final fajrRatio = logs.where((l) => l.getBool(fajrTask.id)).length / logs.length;
       if (fajrRatio > 0.8) {
-        text = "Exceptional Fajr consistency. This morning discipline is the hallmark of elite spiritual growth and will continue to bring Barakah into your days.";
+        text = 'Exceptional Fajr consistency. This morning discipline is the hallmark of elite spiritual growth and will continue to bring Barakah into your days.';
       }
     }
 
@@ -166,7 +168,7 @@ class PdfGenerator {
           pw.SizedBox(height: 8),
           pw.Text(
             text,
-            style: pw.TextStyle(fontSize: 11, color: PdfColors.grey800, lineSpacing: 1.5),
+            style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey800, lineSpacing: 1.5),
           ),
         ],
       ),

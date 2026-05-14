@@ -1,19 +1,20 @@
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
-import 'package:confetti/confetti.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:intl/intl.dart';
+
+import '../../../../core/constants/quotes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/theme_extension.dart';
-import '../../../../core/constants/quotes.dart';
-import '../../../tracker/providers/daily_log_provider.dart';
-import '../widgets/progress_ring.dart';
-import '../../providers/tasks_provider.dart';
-import '../../data/models/amal_task.dart';
 import '../../../auth/providers/auth_provider.dart';
+import '../../../tracker/providers/daily_log_provider.dart';
+import '../../data/models/amal_task.dart';
+import '../../providers/tasks_provider.dart';
 import '../widgets/dynamic_task_card.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+import '../widgets/progress_ring.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -65,7 +66,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final timeContext = ref.watch(timeContextProvider);
 
     final now = DateTime.now();
-    final userName = user?.userMetadata?['full_name']?.split(' ').first ?? "";
+    final userName = user?.userMetadata?['full_name']?.split(' ').first ?? '';
     final greeting = _getGreeting(now.hour, userName);
     final dateStr = DateFormat('EEEE, d MMMM').format(now);
     final quote = AppQuotes.getQuoteOfTheDay();
@@ -253,7 +254,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   String _getGreeting(int hour, String name) {
-    final suffix = name.isNotEmpty ? ", $name" : "";
+    final suffix = name.isNotEmpty ? ', $name' : '';
     if (hour < 5) return 'Assalamu Alaikum$suffix 🌙';
     if (hour < 12) return 'Salam, Good Morning$suffix ☀️';
     if (hour < 17) return 'Salam, Good Afternoon$suffix 🌤️';

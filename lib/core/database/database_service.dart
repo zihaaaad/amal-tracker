@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../features/tracker/data/models/amal_task.dart';
 import 'isar_schemas.dart';
 
@@ -80,10 +83,10 @@ class DatabaseService {
     instance._initialized = true;
     
     // Run migration in background to avoid blocking the splash screen
-    compute(_migrateInBackground, {
+    unawaited(compute(_migrateInBackground, {
       'keys': instance._prefs.getKeys().where((k) => k.startsWith('log_')).toList(),
       'migrated': instance._prefs.getBool('isar_migrated') ?? false,
-    }).then((_) {}).catchError((_) {});
+    }).then((_) {}).catchError((_) {}));
     
     // Also run synchronously for small datasets
     await instance._migrateFromPrefs();

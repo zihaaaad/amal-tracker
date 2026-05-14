@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import '../../../../core/theme/theme_extension.dart';
+
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/theme_extension.dart';
 import '../../../../shared/widgets/hold_to_fill.dart';
 import '../../data/models/amal_task.dart';
 import '../../providers/daily_log_provider.dart';
@@ -69,11 +71,11 @@ class _CheckboxTaskCardState extends ConsumerState<_CheckboxTaskCard>
   Future<void> _toggle() async {
     final isGoingToComplete = !widget.isCompleted;
     if (isGoingToComplete) {
-      HapticFeedback.heavyImpact();
+      await HapticFeedback.heavyImpact();
     } else {
-      HapticFeedback.lightImpact();
+      await HapticFeedback.lightImpact();
     }
-    _controller.forward().then((_) => _controller.reverse());
+    unawaited(_controller.forward().then((_) => _controller.reverse()));
     await ref.read(dailyLogProvider.notifier).toggleTask(widget.task.id);
   }
 
