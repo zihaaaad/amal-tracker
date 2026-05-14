@@ -1,57 +1,43 @@
-# System Architecture - Amal Tracker Monorepo
+# System Architecture: Amal Tracker Monorepo
 
-This document details the industrial-grade architectural decisions behind the Amal Tracker Multi-Target platform.
+This document outlines the technical design and architectural principles governing the Amal Tracker platform.
 
----
+## Monorepo Strategy
 
-## 🏛️ Monorepo Strategy: Shared Kernel, Specialized Targets
+The platform is engineered as a single-source monorepo to maintain high consistency across different user roles. By sharing the core domain logic, data models, and infrastructure services, we ensure that updates to the underlying system are reflected in all application targets simultaneously.
 
-The application is engineered as a **Single-Source Monorepo**. We share 95% of the codebase (models, database logic, themes) while branching into two specialized applications at the entry-level.
+### Application Kernel (AppCore)
+The system boots through a shared initialization kernel located in `lib/app_core.dart`. This class manages the parallel initialization of:
+*   Timezone databases and local location detection.
+*   Isar local database hydration.
+*   Supabase cloud services and authentication state.
+*   UI rendering pipeline pre-warming to reduce interface latency.
 
-### 1. The AppCore Kernel (`lib/app_core.dart`)
-Instead of a standard `main()`, we use a centralized `AppCore` class that acts as the application's lifecycle manager.
--   **Engine Warm-up:** Handles parallel initialization of Timezones, Isar, and Supabase.
--   **Asset Pre-warming:** Triggers the text rendering pipeline to eliminate jank during the first screen transition.
--   **Global State Awareness:** Tracks whether the current instance is in `client` or `admin` mode.
+### Multi-Target Execution
+The build system uses targeted entry points (`main_client.dart` and `main_admin.dart`) combined with Flutter Flavors to produce specialized binaries. This provides a hard boundary at the binary level for application identity and local storage.
 
-### 2. Multi-Target Entry Points
--   `main_client.dart`: Initializes the kernel in Client mode. Points to the personal tracker.
--   `main_admin.dart`: Initializes the kernel in Admin mode. Points directly to institutional oversight.
+## Security and Access Control
 
----
+The system implements a defense-in-depth strategy for institutional security:
 
-## 🔒 Security Gatekeeping & Hard Boundaries
+1.  Binary Identity: Unique Package IDs and signing configurations for each application target.
+2.  Role Validation: Synchronous verification of user roles against the live database profile during the routing phase.
+3.  Biometric Authentication: Mandatory hardware-backed authentication (`local_auth`) for administrative dashboard access.
+4.  Data Isolation: Supabase Row Level Security (RLS) policies to ensure data privacy and institutional integrity.
 
-We implement **Defense-in-Depth** for the Admin target:
-1.  **Flavor Level:** Distinct Package IDs (`com.amaltracker.admin`) ensure physical separation of data folders on the device.
-2.  **App Level:** The `_AppRouter` performs a synchronous check against the `isAdmin` property of the live database profile.
-3.  **UI Level:** Biometric authentication (`local_auth`) is required every time the Admin Dashboard is accessed.
-4.  **Database Level:** Supabase RLS policies ensure that even if the app was compromised, the raw data remains inaccessible to unauthorized roles.
+## Data Persistence and Synchronization
 
----
+The platform utilizes a local-first synchronization engine to ensure operational reliability in varying network environments.
 
-## 💾 Institutional Data Flow
+### Local-First Persistence
+Isar Database serves as the primary source of truth for the user interface, providing low-latency data access. Changes are recorded locally and queued for background synchronization.
 
-### Atomic Sync Engine
-We use a "Local-First" model with Isar as the primary storage. The sync engine is hardened with:
--   **Batch Processing:** Data is synced in chunks of 50 records to prevent payload timeouts.
--   **Conflict Resolution:** Last-Write-Wins (LWW) strategy using nano-precision `updated_at` timestamps.
--   **Sync Results:** The `SyncResult` object provides detailed feedback on success, failure, and network status to the UI.
+### Synchronization Engine
+The synchronization logic is built on an atomic batching system:
+*   Batch Processing: Data is synchronized in manageable chunks to ensure network stability.
+*   Conflict Resolution: A Last-Write-Wins (LWW) strategy is employed using nano-precision timestamps.
+*   Reliability: Chunked upserts and structured result handling ensure data consistency across multiple devices.
 
-### Global Analytics Pipeline
-The Admin app utilizes a specialized `AdminService` that performs aggregate queries across the `profiles` and `daily_logs` tables to calculate:
--   **Institutional Pulse:** Real-time engagement percentages.
--   **Performance Rankings:** Weighted point calculation over a rolling 7-day window.
+## Design System
 
----
-
-## 🎨 Professional Design System
-
-Our UI is built on a **Layered Theme Extension** architecture:
--   **Context Awareness:** Colors are resolved via `context.timeTint` or `context.surface`, allowing for dynamic mood shifting based on the spiritual time of day.
--   **Haptic Integration:** The system uses `selectionClick` and `mediumImpact` feedback to provide a tactile "premium" feel consistent with high-end institutional tools.
-
----
-
-**Document Version:** 2.0.0
-**Architect:** Gemini CLI (Senior AI Engineer)
+The user interface is governed by a semantic theme extension architecture. This allows the application to dynamically resolve aesthetic properties (such as colors and haptics) based on the spiritual context and time of day, while maintaining a consistent institutional brand identity.

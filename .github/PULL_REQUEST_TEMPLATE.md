@@ -1,27 +1,22 @@
-## 📝 Description
-Please include a summary of the change and which issue is fixed. Please also include relevant motivation and context.
+## Technical Description
+Provide a summary of the technical changes and the motivation behind them. Identify any associated issues.
 
-Fixes # (issue)
+## Change Type
+- [ ] Bug fix (Non-breaking change addressing a defect)
+- [ ] Feature (Non-breaking change adding functionality)
+- [ ] Breaking change (Fix or feature that modifies existing behavior)
+- [ ] Refactor (Non-functional code improvement)
 
-## 🏗️ Type of change
-- [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
-- [ ] ✨ New feature (non-breaking change which adds functionality)
-- [ ] 💥 Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] 🧹 Chore (cleanup, refactor, or non-user-facing change)
+## Verification Procedures
+Describe the testing methodology employed to verify the integrity of the changes.
+- [ ] Client Environment (Flavor: client)
+- [ ] Admin Environment (Flavor: admin)
 
-## 🧪 How Has This Been Tested?
-Please describe the tests that you ran to verify your changes. 
-- [ ] Client App (Flavor: client)
-- [ ] Admin App (Flavor: admin)
+## Visual Documentation
+Include relevant screenshots or screen recordings to document UI modifications.
 
-## 📸 Screenshots (if appropriate)
-Attach screenshots or GIFs to help reviewers understand the visual impact.
-
-## 🏁 Checklist:
-- [ ] My code follows the style guidelines of this project
-- [ ] I have performed a self-review of my own code
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] I have made corresponding changes to the documentation
-- [ ] My changes generate no new warnings
-- [ ] I have added tests that prove my fix is effective or that my feature works
-- [ ] Any dependent changes have been merged and published in downstream modules
+## Deployment Checklist
+- [ ] Documentation updated to reflect changes
+- [ ] Static analysis verified via `flutter analyze`
+- [ ] Build generation verified via `build_runner`
+- [ ] Unit and integration tests passed

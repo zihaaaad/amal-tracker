@@ -1,32 +1,28 @@
-# Contributing to Amal Tracker Monorepo
+# Contributing Guidelines: Amal Tracker Monorepo
 
-We maintain an elite standard for institutional software. Contributions must respect the **Single-Source Monorepo** architecture and follow strict engineering protocols.
+Contributions to the Amal Tracker platform must adhere to the established architectural standards and institutional requirements.
 
-## 🏗️ Monorepo Integrity
+## Engineering Principles
 
-- **Shared Kernel:** Any changes to `lib/app_core.dart` or `lib/core/` affect **both** applications. Always test both the Client and Admin targets after modifying core infrastructure.
-- **Feature Isolation:** Keep feature-specific logic within its folder in `lib/features/`. Use the `AppMode` enum if a shared widget needs to behave differently between apps.
-- **Provider Pattern:** We use `flutter_riverpod` for all state management. State should be reactive and scoped appropriately.
+### Monorepo Integrity
+*   Shared Infrastructure: Modifications to `lib/core/` or `lib/app_core.dart` impact all application targets. Developers must verify changes across both Client and Admin environments.
+*   Feature Isolation: New business logic should be contained within modular directories in `lib/features/`.
 
-## 🛠️ Professional Standards
+### Development Standards
+*   State Management: Riverpod is the mandatory state management solution. Logic should be reactive and decoupled from the presentation layer.
+*   Data Persistence: Changes to database schemas in `lib/core/database/isar_schemas.dart` require a re-run of the code generation tool (`build_runner`).
+*   Code Quality: Adherence to the project's strict analysis rules is mandatory. Use `flutter analyze` to verify compliance.
 
-- **Conventional Commits:** Use semantic commit messages (e.g., `feat(admin): add report exporting`, `fix(sync): resolve race condition`).
-- **Targeted Testing:** Verify changes by running:
-  - `flutter run --flavor client -t lib/main_client.dart`
-  - `flutter run --flavor admin -t lib/main_admin.dart`
-- **Zero-Warning Policy:** We do not accept PRs with `flutter analyze` warnings or infos. Run analysis locally before pushing.
+## Workflow
 
-## 🧪 Database & Schema
+1.  Branching Strategy: Utilize descriptive branch prefixes (`feature/`, `bugfix/`, `chore/`).
+2.  Commit Protocol: Follow conventional commit standards for clear version history.
+3.  Verification: Ensure both application targets are buildable and functional:
+    *   Client build: `flutter build apk --flavor client -t lib/main_client.dart`
+    *   Admin build: `flutter build apk --flavor admin -t lib/main_admin.dart`
 
-- **Isar:** If you modify a schema in `lib/core/database/isar_schemas.dart`, you **must** run `dart run build_runner build` and include the generated `.g.dart` files in your commit.
-- **Supabase:** Ensure migrations are added to the `supabase/migrations/` folder for any schema changes.
+## Security Requirements
 
-## 🛡️ Security Gatekeeping
-
-- **Never** expose API keys or credentials.
-- Any new administrative functionality **must** be protected by the biometric gate in the `AdminDashboardScreen`.
-- Ensure Row Level Security (RLS) is considered for all new database tables.
-
----
-
-**Built with excellence. Developed for impact.**
+*   Sensitive Information: Do not commit API keys, service accounts, or environmental secrets.
+*   Access Control: New administrative functionality must be integrated with the existing biometric security gate and RBAC logic.
+*   Data Privacy: Respect Supabase Row Level Security (RLS) policies for all data access patterns.

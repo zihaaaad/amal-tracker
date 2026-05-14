@@ -1,59 +1,40 @@
-# Amal Tracker - Enterprise Operations Manual
+# Institutional Operations Manual: Amal Tracker
 
-This manual provides operational guidance for managing and deploying the Amal Tracker Monorepo ecosystem.
+This document provides operational guidance for the deployment and management of the Amal Tracker platform.
 
----
+## System Components
 
-## 🏛️ Ecosystem Overview
-The Amal Tracker ecosystem consists of two distinct applications sharing a single backend and kernel:
-1.  **Amal Tracker (Client):** The daily spiritual tracker for employees.
-2.  **Foundation Admin:** The institutional oversight and analytics dashboard for management.
+The platform consists of two specialized applications sharing a common backend infrastructure:
+1.  Amal Tracker (Client): Daily practice tracking for foundation employees.
+2.  Foundation Admin: Institutional oversight and analytics for management.
 
----
+## Operational Procedures
 
-## 🏗️ Technical Operations
+### Application Initialization
+Both applications utilize the `AppCore` initialization kernel. This ensures that environmental variables, timezone detection, and local database hydration are performed consistently before the user interface is presented.
 
-### 1. The Multi-Target Architecture
-The project uses **Targeted Entry Points** and **Build Flavors** to generate independent binaries.
--   **Kernel Init:** All apps boot via `AppCore.init(AppMode mode)`.
--   **Hardware Separation:** Each flavor uses a unique Package ID to ensure separate local storage and preference files.
+### Environment Management
+The platform uses build flavors to manage application identity. This allows both the Client and Admin versions to coexist on the same device without data or preference conflicts.
 
-### 2. Build & Deployment Commands
-Use these commands for local development and manual builds:
-
-| Application | Command (Run) | Command (Build APK) |
+| Application Target | Execution Command | Production Build Command |
 | :--- | :--- | :--- |
-| **Client** | `flutter run --flavor client -t lib/main_client.dart` | `flutter build apk --release --flavor client -t lib/main_client.dart` |
-| **Admin** | `flutter run --flavor admin -t lib/main_admin.dart` | `flutter build apk --release --flavor admin -t lib/main_admin.dart` |
+| Client | `flutter run --flavor client -t lib/main_client.dart` | `flutter build apk --release --flavor client -t lib/main_client.dart` |
+| Admin | `flutter run --flavor admin -t lib/main_admin.dart` | `flutter build apk --release --flavor admin -t lib/main_admin.dart` |
 
----
+## Security Management
 
-## 🛡️ Security & Access Control
+### Access Control
+User access is governed by the `role` field within the institutional database profiles.
+*   Standard employees are limited to the Client application.
+*   Administrators are granted access to the Admin application, which requires secondary biometric authentication for every session.
 
-### Role-Based Access (RBAC)
-User roles are managed in the Supabase `profiles` table.
--   **Role: 'employee'** - Can only access the Client app.
--   **Role: 'admin'** - Can access both apps. Access to the Admin app is further gated by a mandatory biometric challenge.
+### Authentication Protection
+Unique authentication redirect schemes are employed to ensure that login callbacks are routed to the correct application target, preventing cross-application authentication leaks.
 
-### Institutional Protection
-The system uses **Dynamic Auth Redirects**. The Client app redirects to `com.amaltracker.auth`, while the Admin app uses `com.amaltracker.admin.auth`. This prevents cross-app authentication leaks.
+## Data Oversight and Reporting
 
----
+The administrative dashboard provides institutional-level metrics, including participation rates and performance analytics. These metrics are calculated via the `AdminService` by aggregating historical log data and profile metadata.
 
-## 📊 Analytics & Reporting
-The Admin Dashboard provides real-time institutional metrics:
--   **Engagement Pulse:** Calculated daily via the `AdminService` by aggregating `daily_logs` completion data.
--   **Top Performers:** A rolling 7-day leaderboard based on cumulative points from prayers and habits.
+## Continuous Delivery
 
----
-
-## 🚀 CI/CD Pipeline
-The GitHub Actions pipeline (`.github/workflows/build_release.yml`) is the primary deployment method. It automatically:
-1.  Performs static analysis.
-2.  Generates code for Isar schemas.
-3.  Builds **both** the Client and Admin APKs.
-4.  Attaches the binaries to the GitHub Release.
-
----
-
-**Institutional Integrity. Engineering Excellence.**
+The deployment pipeline is automated through GitHub Actions. Each commit to the primary branch initiates an automated build of both APK targets, ensuring that the latest institutional updates are always available for distribution.
