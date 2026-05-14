@@ -23,8 +23,8 @@ class AnalyticsScreen extends ConsumerStatefulWidget {
 class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
   @override
   Widget build(BuildContext context) {
+    final analytics = ref.watch(analyticsDataProvider);
     final monthLogs = ref.watch(monthLogsProvider);
-    final streak = ref.watch(streakProvider);
     final tasksAsync = ref.watch(tasksProvider);
 
     return Scaffold(
@@ -34,7 +34,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
         centerTitle: true,
       ),
       body: tasksAsync.when(
-        data: (tasks) => _buildBody(context, monthLogs, streak, tasks),
+        data: (tasks) => _buildBody(context, analytics, monthLogs, tasks),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(
           child: Padding(
@@ -48,23 +48,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
 
   Widget _buildBody(
     BuildContext context,
+    AnalyticsData analytics,
     List<DailyLog> monthLogs,
-    int streak,
     List<AmalTask> tasks,
   ) {
-    final now = DateTime.now();
-    final pastLogs = monthLogs.where((l) {
-      final day = DateTime.parse(l.date).day;
-      return day <= now.day;
-    }).toList();
-
-    final avgCompletion = pastLogs.isEmpty
-        ? 0.0
-        : pastLogs.fold(0.0, (s, l) => s + l.calculateCompletion(tasks)) /
-            pastLogs.length;
-
-    final daysTracked = pastLogs.where((l) => l.calculateCompletion(tasks) > 0).length;
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -77,7 +64,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                 child: _StatCard(
                   icon: Icons.local_fire_department_rounded,
                   iconColor: AppColors.warmAmber,
-                  value: '$streak',
+                  value: '${analytics.streak}',
                   label: 'Day Streak',
                 ),
               ),
@@ -86,7 +73,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                 child: _StatCard(
                   icon: Icons.calendar_month_rounded,
                   iconColor: const Color(0xFF6B9BD2),
-                  value: '$daysTracked',
+                  value: '${analytics.daysTracked}',
                   label: 'Days Tracked',
                 ),
               ),
@@ -95,7 +82,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                 child: _StatCard(
                   icon: Icons.trending_up_rounded,
                   iconColor: AppColors.sageGreen,
-                  value: '${(avgCompletion * 100).round()}%',
+                  value: '${(analytics.avgCompletion * 100).round()}%',
                   label: 'Avg. Done',
                 ),
               ),
@@ -105,7 +92,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
           const SizedBox(height: 16),
 
           // ── Weekly Trend Comparison ─────────────────────────────
-          _buildWeeklyTrend(context, tasks).animate().fadeIn(delay: 200.ms, duration: 600.ms).slideX(begin: 0.05, end: 0),
+          _buildWeeklyTrend(context, analytics.weeklyTrend).animate().fadeIn(delay: 200.ms, duration: 600.ms).slideX(begin: 0.05, end: 0),
 
           const SizedBox(height: 28),
 
@@ -139,12 +126,12 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
           const SizedBox(height: 28),
 
           // ── Best & Worst Days ───────────────────────────────────
-          _buildDayBreakdown(context, pastLogs, tasks),
+          _buildDayBreakdown(context, analytics.pastLogs, tasks),
 
           const SizedBox(height: 12),
 
           // ── Spiritual Insights (Wisdom over Data) ───────────────
-          _buildSpiritualInsights(context, pastLogs, tasks),
+          _buildSpiritualInsights(context, analytics.pastLogs, tasks),
 
           const SizedBox(height: 28),
 
@@ -464,30 +451,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     );
   }
 
-  Widget _buildWeeklyTrend(BuildContext context, List<AmalTask> tasks) {
-    final db = DatabaseService.instance;
-    final now = DateTime.now();
-    final thisWeekStart = now.subtract(Duration(days: now.weekday - 1));
-    double thisWeekTotal = 0;
-    int thisWeekDays = 0;
-    for (int i = 0; i <= now.weekday - 1; i++) {
-      final log = db.getLog(thisWeekStart.add(Duration(days: i)));
-      final comp = log.calculateCompletion(tasks);
-      if (comp > 0) { thisWeekTotal += comp; thisWeekDays++; }
-    }
-    final thisWeekAvg = thisWeekDays > 0 ? thisWeekTotal / thisWeekDays : 0.0;
-    final lastWeekStart = thisWeekStart.subtract(const Duration(days: 7));
-    double lastWeekTotal = 0;
-    int lastWeekDays = 0;
-    for (int i = 0; i < 7; i++) {
-      final log = db.getLog(lastWeekStart.add(Duration(days: i)));
-      final comp = log.calculateCompletion(tasks);
-      if (comp > 0) { lastWeekTotal += comp; lastWeekDays++; }
-    }
-    final lastWeekAvg = lastWeekDays > 0 ? lastWeekTotal / lastWeekDays : 0.0;
-    final diff = ((thisWeekAvg - lastWeekAvg) * 100).round();
+  Widget _buildWeeklyTrend(BuildContext context, double trend) {
+    final diff = (trend * 100).round();
     final isUp = diff >= 0;
-    if (thisWeekDays == 0 && lastWeekDays == 0) return const SizedBox.shrink();
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -510,7 +477,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('Weekly Progress', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: context.textPrimary)),
               const SizedBox(height: 2),
-              Text(lastWeekDays > 0 ? 'vs last week' : 'first week tracking!', style: TextStyle(fontSize: 12, color: context.textMuted)),
+              Text('vs last week performance', style: TextStyle(fontSize: 12, color: context.textMuted)),
             ]),
           ),
           Container(

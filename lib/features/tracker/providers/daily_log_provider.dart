@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../core/database/database_service.dart';
 import 'tasks_provider.dart';
 
@@ -51,6 +52,83 @@ final selectedDateProvider = StateProvider<DateTime>((ref) => DateTime.now());
 final monthLogsProvider = Provider<List<DailyLog>>((ref) {
   ref.watch(dailyLogProvider);
   return DatabaseService.instance.getCurrentMonthLogs();
+});
+
+/// Data-focused analytics aggregation for the UI.
+class AnalyticsData {
+  final int streak;
+  final int daysTracked;
+  final double avgCompletion;
+  final double weeklyTrend;
+  final List<DailyLog> pastLogs;
+
+  AnalyticsData({
+    required this.streak,
+    required this.daysTracked,
+    required this.avgCompletion,
+    required this.weeklyTrend,
+    required this.pastLogs,
+  });
+}
+
+/// Reactive provider for aggregated analytics data.
+/// Performs all heavy calculations in a single place.
+final analyticsDataProvider = Provider<AnalyticsData>((ref) {
+  final monthLogs = ref.watch(monthLogsProvider);
+  final streak = ref.watch(streakProvider);
+  final tasks = ref.watch(tasksProvider).value ?? [];
+  final now = DateTime.now();
+
+  // 1. Filter past logs for today and before
+  final pastLogs = monthLogs.where((l) {
+    try {
+      final day = DateTime.parse(l.date).day;
+      return day <= now.day;
+    } catch (_) {
+      return false;
+    }
+  }).toList();
+
+  // 2. Average Completion
+  final avgCompletion = pastLogs.isEmpty
+      ? 0.0
+      : pastLogs.fold(0.0, (s, l) => s + l.calculateCompletion(tasks)) /
+          pastLogs.length;
+
+  // 3. Days Tracked
+  final daysTracked = pastLogs.where((l) => l.calculateCompletion(tasks) > 0).length;
+
+  // 4. Weekly Trend Calculation
+  final thisWeekStart = now.subtract(Duration(days: now.weekday - 1));
+  double thisWeekTotal = 0;
+  int thisWeekDays = 0;
+  for (int i = 0; i <= now.weekday - 1; i++) {
+    final dateStr = DateFormat('yyyy-MM-dd').format(thisWeekStart.add(Duration(days: i)));
+    final log = monthLogs.firstWhere((l) => l.date == dateStr, orElse: () => DailyLog(date: dateStr));
+    final comp = log.calculateCompletion(tasks);
+    if (comp > 0) { thisWeekTotal += comp; thisWeekDays++; }
+  }
+  final thisWeekAvg = thisWeekDays > 0 ? thisWeekTotal / thisWeekDays : 0.0;
+
+  final lastWeekStart = thisWeekStart.subtract(const Duration(days: 7));
+  double lastWeekTotal = 0;
+  int lastWeekDays = 0;
+  for (int i = 0; i < 7; i++) {
+    // Note: DatabaseService.getLog is Sync and cached in Isar, but for consistency we use monthLogs if available
+    final log = DatabaseService.instance.getLog(lastWeekStart.add(Duration(days: i)));
+    final comp = log.calculateCompletion(tasks);
+    if (comp > 0) { lastWeekTotal += comp; lastWeekDays++; }
+  }
+  final lastWeekAvg = lastWeekDays > 0 ? lastWeekTotal / lastWeekDays : 0.0;
+  final trend = thisWeekAvg - lastWeekAvg;
+
+  return AnalyticsData(
+    streak: streak,
+    daysTracked: daysTracked,
+    avgCompletion: avgCompletion,
+    weeklyTrend: trend,
+    pastLogs: pastLogs,
+  );
 });
 
 enum SyncStatus { idle, syncing, success, error, offline }
