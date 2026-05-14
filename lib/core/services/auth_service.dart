@@ -31,10 +31,7 @@ class AuthService {
     final metadata = user.userMetadata ?? {};
     final metaRole = metadata['role'];
     
-    if (metaRole == 'admin' || metaRole == 'manager') return true;
-    
-    // 3. Safety Fallback: Email domain check for foundation admins
-    return user.email?.endsWith('@assunnahfoundation.org') == true;
+    return metaRole == 'admin' || metaRole == 'manager';
   }
 
   /// Returns true if the user has completed their institutional onboarding.
