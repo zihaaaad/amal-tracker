@@ -1,3 +1,4 @@
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -79,6 +80,7 @@ class AppCore {
   }
 
   static Future<void> _prewarmAssets() async {
+    // Layout pre-warm with explicit direction
     TextPainter(textDirection: TextDirection.ltr).layout();
     try {
       await GoogleFonts.pendingFonts([
@@ -107,7 +109,10 @@ class AmalTrackerApp extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
 
     return MaterialApp(
-      title: mode == AppMode.admin ? 'Foundation Admin' : 'As-Sunnah Tracker',
+      title: mode == AppMode.admin ? 'Foundation Admin' : 'app_title'.tr(),
+      localizationsDelegates: context.localizationDelegates,
+      supportedLocales: context.supportedLocales,
+      locale: context.locale,
       themeMode: settings.themeMode,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,

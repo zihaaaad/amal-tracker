@@ -1,0 +1,31 @@
+{
+  "app_title": "متابع الأعمال",
+  "home": {
+    "title": "أعمال اليوم",
+    "streak": "سلسلة الأيام",
+    "completion": "الإنجاز",
+    "no_tasks": "لا توجد مهام اليوم."
+  },
+  "auth": {
+    "welcome": "مرحباً",
+    "signin": "تسجيل الدخول",
+    "onboarding_title": "إعداد الملف الشخصي",
+    "employee_id": "رقم الموظف",
+    "phone": "رقم الهاتف",
+    "department": "القسم",
+    "save": "إكمال الإعداد"
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "profile": "الملف الشخصي",
+    "appearance": "المظهر",
+    "language": "اللغة",
+    "logout": "تسجيل الخروج"
+  },
+  "common": {
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "error": "خطأ",
+    "loading": "جاري التحميل..."
+  }
+}

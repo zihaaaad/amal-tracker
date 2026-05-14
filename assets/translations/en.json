@@ -1,0 +1,31 @@
+{
+  "app_title": "Amal Tracker",
+  "home": {
+    "title": "Today's Amal",
+    "streak": "Day Streak",
+    "completion": "Completion",
+    "no_tasks": "No tasks for today."
+  },
+  "auth": {
+    "welcome": "Welcome",
+    "signin": "Sign In",
+    "onboarding_title": "Setup Profile",
+    "employee_id": "Employee ID",
+    "phone": "Phone Number",
+    "department": "Department",
+    "save": "Complete Setup"
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "appearance": "Appearance",
+    "language": "Language",
+    "logout": "Log Out"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "error": "Error",
+    "loading": "Loading..."
+  }
+}

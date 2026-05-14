@@ -1,0 +1,31 @@
+{
+  "app_title": "Amal Tracker",
+  "home": {
+    "title": "আজকের আমল",
+    "streak": "টানা দিন",
+    "completion": "সম্পন্ন",
+    "no_tasks": "আজকের জন্য কোনো কাজ নেই।"
+  },
+  "auth": {
+    "welcome": "স্বাগতম",
+    "signin": "সাইন ইন",
+    "onboarding_title": "প্রোফাইল সেটআপ",
+    "employee_id": "আইডি",
+    "phone": "ফোন নম্বর",
+    "department": "বিভাগ",
+    "save": "সম্পন্ন করুন"
+  },
+  "settings": {
+    "title": "সেটিংস",
+    "profile": "প্রোফাইল",
+    "appearance": "চেহারা",
+    "language": "ভাষা",
+    "logout": "লগ আউট"
+  },
+  "common": {
+    "save": "সংরক্ষণ",
+    "cancel": "বাতিল",
+    "error": "ত্রুটি",
+    "loading": "লোড হচ্ছে..."
+  }
+}

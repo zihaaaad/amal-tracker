@@ -1,5 +1,5 @@
 import 'dart:async';
-
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,7 +28,7 @@ class SettingsScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: context.surface,
       appBar: AppBar(
-        title: const Text('Preferences'),
+        title: Text('settings.title'.tr()),
         centerTitle: true,
       ),
       body: ListView(
@@ -67,7 +67,7 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 32),
 
           // Theme Section
-          _buildSectionTitle(context, 'APPEARANCE'),
+          _buildSectionTitle(context, 'settings.appearance'.tr().toUpperCase()),
           _buildSettingsTile(context, 
             icon: Icons.dark_mode_rounded,
             title: 'Dark Mode',
@@ -82,6 +82,18 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           
+          const SizedBox(height: 32),
+
+          // Language Section
+          _buildSectionTitle(context, 'settings.language'.tr().toUpperCase()),
+          _buildSettingsTile(
+            context,
+            icon: Icons.language_rounded,
+            title: 'settings.language'.tr(),
+            subtitle: 'Current: ${context.locale.languageCode.toUpperCase()}',
+            onTap: () => _showLanguageDialog(context),
+          ),
+
           const SizedBox(height: 32),
           
           // Notifications
@@ -101,8 +113,6 @@ class SettingsScreen extends ConsumerWidget {
           ),
           
           const SizedBox(height: 32),
-
-          const SizedBox(height: 24),
 
           // Admin Dashboard (Institutional Control)
           profileAsync.when(
@@ -185,7 +195,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
           _buildSettingsTile(context, 
             icon: Icons.logout_rounded,
-            title: 'Sign Out',
+            title: 'settings.logout'.tr(),
             subtitle: 'Securely exit your session',
             iconColor: AppColors.softCoral,
             titleColor: AppColors.softCoral,
@@ -216,6 +226,77 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 120), // Bottom padding for floating nav
 
         ],
+      ),
+    );
+  }
+
+  void _showLanguageDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: context.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: context.textMuted.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'settings.language'.tr(),
+              style: GoogleFonts.outfit(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: context.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 24),
+            _buildLanguageTile(context, 'English', 'en'),
+            _buildLanguageTile(context, 'বাংলা', 'bn'),
+            _buildLanguageTile(context, 'العربية', 'ar'),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLanguageTile(BuildContext context, String name, String code) {
+    final isSelected = context.locale.languageCode == code;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: isSelected ? context.timeTint.withValues(alpha: 0.1) : context.surfaceCard,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isSelected ? context.timeTint : context.glassBorder.withValues(alpha: 0.5),
+        ),
+      ),
+      child: ListTile(
+        onTap: () {
+          context.setLocale(Locale(code));
+          Navigator.pop(context);
+        },
+        title: Text(
+          name,
+          style: TextStyle(
+            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+            color: isSelected ? context.timeTint : context.textPrimary,
+          ),
+        ),
+        trailing: isSelected 
+            ? Icon(Icons.check_circle_rounded, color: context.timeTint) 
+            : null,
       ),
     );
   }
