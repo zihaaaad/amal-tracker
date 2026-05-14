@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app_core.dart';
 
-/// Default entry point (Client Mode)
+/// Entry point for the Standard Employee Tracker.
 void main() async {
   await AppCore.init();
   runApp(const ProviderScope(

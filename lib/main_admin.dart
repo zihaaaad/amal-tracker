@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app_core.dart';
 
-/// Default entry point (Client Mode)
+/// Entry point for the Foundation Admin Dashboard.
 void main() async {
   await AppCore.init();
   runApp(const ProviderScope(
-    child: AmalTrackerApp(mode: AppMode.client),
+    child: AmalTrackerApp(mode: AppMode.admin),
   ));
 }

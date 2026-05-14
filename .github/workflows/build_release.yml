@@ -1,4 +1,4 @@
-name: Build and Release Flutter APK
+name: Build and Release Flutter APKs
 
 on:
   push:
@@ -20,7 +20,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17' # Required for Gradle 8.x
+          java-version: '17'
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -31,21 +31,33 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
-      # CRITICAL STEP: Generate Isar Schemas before building
       - name: Run Build Runner
         run: dart run build_runner build --delete-conflicting-outputs
 
       - name: Analyze Code
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
-      - name: Build APK
-        run: flutter build apk --release
+      # ── Build Client APK ───────────────────────────────────────────
+      - name: Build Client APK
+        run: flutter build apk --release -t lib/main_client.dart --flavor client || flutter build apk --release -t lib/main_client.dart
 
-      - name: Upload APK Artifact
+      - name: Rename Client APK
+        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/Amal_Tracker_Client.apk || mv build/app/outputs/flutter-apk/app-client-release.apk build/app/outputs/flutter-apk/Amal_Tracker_Client.apk
+
+      # ── Build Admin APK ────────────────────────────────────────────
+      - name: Build Admin APK
+        run: flutter build apk --release -t lib/main_admin.dart --flavor admin || flutter build apk --release -t lib/main_admin.dart
+
+      - name: Rename Admin APK
+        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/Amal_Tracker_Admin.apk || mv build/app/outputs/flutter-apk/app-admin-release.apk build/app/outputs/flutter-apk/Amal_Tracker_Admin.apk
+
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Amal-Tracker-Release-APK
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: Amal-Tracker-APKs
+          path: |
+            build/app/outputs/flutter-apk/Amal_Tracker_Client.apk
+            build/app/outputs/flutter-apk/Amal_Tracker_Admin.apk
 
       - name: Create GitHub Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -53,7 +65,9 @@ jobs:
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: Release v1.0.${{ github.run_number }}
-          files: build/app/outputs/flutter-apk/app-release.apk
+          files: |
+            build/app/outputs/flutter-apk/Amal_Tracker_Client.apk
+            build/app/outputs/flutter-apk/Amal_Tracker_Admin.apk
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
