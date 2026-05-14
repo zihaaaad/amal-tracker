@@ -68,47 +68,59 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 24),
 
           // Admin Dashboard (Institutional Control)
-          if (AuthService.instance.isAdmin) ...[
-            _buildSectionTitle(context, 'INSTITUTIONAL CONTROL'),
-            _buildSettingsTile(context,
-              icon: Icons.admin_panel_settings_rounded,
-              title: 'Admin Dashboard',
-              subtitle: 'Manage Foundation tasks & employees',
-              onTap: () async {
-                HapticFeedback.mediumImpact();
-                final auth = LocalAuthentication();
-                try {
-                  final canAuth = await auth.canCheckBiometrics || await auth.isDeviceSupported();
-                  if (canAuth) {
-                    final didAuth = await auth.authenticate(
-                      localizedReason: 'Authenticate to access Foundation Management',
-                      options: const AuthenticationOptions(stickyAuth: true, biometricOnly: false),
-                    );
-                    if (didAuth && context.mounted) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
-                      );
-                    }
-                  } else if (context.mounted) {
-                    // Fallback if no biometrics
-                    Navigator.push(
+          profileAsync.when(
+            data: (profile) {
+              if (AuthService.instance.isAdmin) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionTitle(context, 'INSTITUTIONAL CONTROL'),
+                    _buildSettingsTile(
                       context,
-                      MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
-                    );
-                  }
-                } catch (_) {
-                  if (context.mounted) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
-                    );
-                  }
-                }
-              },
-            ),
-            const SizedBox(height: 24),
-          ],
+                      icon: Icons.admin_panel_settings_rounded,
+                      title: 'Admin Dashboard',
+                      subtitle: 'Manage Foundation tasks & employees',
+                      onTap: () async {
+                        HapticFeedback.mediumImpact();
+                        final auth = LocalAuthentication();
+                        try {
+                          final canAuth = await auth.canCheckBiometrics || await auth.isDeviceSupported();
+                          if (canAuth) {
+                            final didAuth = await auth.authenticate(
+                              localizedReason: 'Authenticate to access Foundation Management',
+                              options: const AuthenticationOptions(stickyAuth: true, biometricOnly: false),
+                            );
+                            if (didAuth && context.mounted) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
+                              );
+                            }
+                          } else if (context.mounted) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
+                            );
+                          }
+                        } catch (_) {
+                          if (context.mounted) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                );
+              }
+              return const SizedBox.shrink();
+            },
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
 
           // Account & Sync
           _buildSectionTitle(context, 'ACCOUNT'),

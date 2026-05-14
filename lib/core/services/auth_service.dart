@@ -15,14 +15,22 @@ class AuthService {
   Stream<AuthState> get authStateChanges => _supabase.auth.onAuthStateChange;
 
   /// Returns true if the user is an authorized admin for As-Sunnah Foundation.
+  /// PRIORITIZES: Live Database Profile > Email Domain > Auth Metadata (Fallback)
   bool get isAdmin {
+    // 1. Check fresh profile from database (Source of Truth)
     if (_currentProfile != null) {
       return _currentProfile!['role'] == 'admin';
     }
+
+    // 2. Check Auth Metadata (Cached/Fallback)
     final user = currentUser;
     if (user == null) return false;
     final metadata = user.userMetadata ?? {};
-    return metadata['role'] == 'admin' || user.email?.endsWith('@assunnahfoundation.org') == true;
+    
+    if (metadata['role'] == 'admin') return true;
+
+    // 3. Institutional Email Domain Protection
+    return user.email?.endsWith('@assunnahfoundation.org') == true;
   }
 
   /// Returns true if the user has completed their institutional onboarding.

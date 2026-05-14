@@ -23,3 +23,15 @@ final sessionProvider = Provider<Session?>((ref) {
 final userProvider = Provider<User?>((ref) {
   return ref.watch(sessionProvider)?.user;
 });
+
+/// Reactive provider for the user's database profile.
+/// Refreshes automatically on auth changes.
+final profileProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
+  final user = ref.watch(userProvider);
+  if (user == null) {
+    AuthService.instance.clearProfile();
+    return null;
+  }
+  await AuthService.instance.refreshProfile();
+  return AuthService.instance.currentProfile;
+});
