@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/theme/theme_extension.dart';
-import '../providers/auth_provider.dart';
+import '../../providers/auth_provider.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
