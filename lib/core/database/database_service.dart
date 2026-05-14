@@ -51,9 +51,9 @@ class DailyLog {
     return total;
   }
 
-  Map<String, dynamic> toJson() => {'date': date, 'values': values};
+  Map<String, dynamic> toJson() => {'date': date, 'completion_data': values};
   factory DailyLog.fromJson(Map<String, dynamic> json) => 
-      DailyLog(date: json['date'], values: json['values'] ?? {});
+      DailyLog(date: json['date'], values: json['completion_data'] ?? {});
 
   bool getBool(String key) => values[key] == true;
   int getCounter(String key) => values[key] is int ? values[key] : 0;
@@ -257,7 +257,7 @@ class DatabaseService {
       if (cloudUpdatedAt == null || e.updatedAt.isAfter(cloudUpdatedAt)) {
         logsToSync.add({
           'date': e.date,
-          'values': json.decode(e.valuesJson),
+          'completion_data': json.decode(e.valuesJson),
           'user_id': user.id,
           'updated_at': e.updatedAt.toIso8601String(),
         });
@@ -305,7 +305,7 @@ class DatabaseService {
             final entry = DailyLogEntry()
               ..id = localEntry?.id ?? Isar.autoIncrement
               ..date = dateStr
-              ..valuesJson = json.encode(item['values'] ?? {})
+              ..valuesJson = json.encode(item['completion_data'] ?? {})
               ..createdAt = localEntry?.createdAt ?? DateTime.now()
               ..updatedAt = cloudUpdatedAt;
             await _isar.dailyLogEntrys.put(entry);
