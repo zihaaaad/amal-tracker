@@ -16,21 +16,25 @@ class AuthService {
   Stream<AuthState> get authStateChanges => _supabase.auth.onAuthStateChange;
 
   /// Returns true if the user is an authorized admin for As-Sunnah Foundation.
-  /// PRIORITIZES: Live Database Profile > Email Domain > Auth Metadata (Fallback)
+  /// PRIORITIZES: Live Database Profile > Auth Metadata (Fallback)
   bool get isAdmin {
+    final user = currentUser;
+    if (user == null) return false;
+
     // 1. Check fresh profile from database (Source of Truth)
     if (_currentProfile != null) {
-      return _currentProfile!['role'] == 'admin';
+      final role = _currentProfile!['role'];
+      return role == 'admin' || role == 'manager';
     }
 
     // 2. Check Auth Metadata (Cached/Fallback)
-    final user = currentUser;
-    if (user == null) return false;
     final metadata = user.userMetadata ?? {};
+    final metaRole = metadata['role'];
     
-    if (metadata['role'] == 'admin') return true;
+    if (metaRole == 'admin' || metaRole == 'manager') return true;
     
-    return false;
+    // 3. Safety Fallback: Email domain check for foundation admins
+    return user.email?.endsWith('@assunnahfoundation.org') == true;
   }
 
   /// Returns true if the user has completed their institutional onboarding.
@@ -55,10 +59,11 @@ class AuthService {
           .select()
           .eq('id', user.id)
           .maybeSingle();
+      
+      debugPrint('Profile Refreshed: ${response != null ? 'Found' : 'Not Found'}');
       _currentProfile = response;
     } catch (e) {
-      debugPrint('Profile refresh: $e');
-      // If profiles table doesn't exist yet, use auth metadata as fallback
+      debugPrint('Profile refresh error: $e');
       _currentProfile = null;
     }
   }
@@ -76,21 +81,15 @@ class AuthService {
     required String employeeId,
     required String subInstitute,
   }) async {
-    // Update auth metadata
-    await _supabase.auth.updateUser(
-      UserAttributes(
-        data: {
-          'full_name': name,
-          'is_profile_complete': true,
-        },
-      ),
-    );
+    final user = currentUser;
+    if (user == null) throw Exception('No authenticated user');
 
-    // Update the public profiles table
+    // 1. Update the public profiles table FIRST
+    // This is the source of truth. If this fails, we shouldn't mark auth as complete.
     try {
       await _supabase.from('profiles').upsert({
-        'id': currentUser!.id,
-        'email': currentUser!.email ?? '',
+        'id': user.id,
+        'email': user.email ?? '',
         'full_name': name,
         'phone': phone,
         'department': department,
@@ -99,8 +98,26 @@ class AuthService {
         'is_profile_complete': true,
         'updated_at': DateTime.now().toIso8601String(),
       });
+      debugPrint('Database profile updated successfully');
     } catch (e) {
-      debugPrint('Profile table update failed: $e');
+      debugPrint('DB Profile Update FAILED: $e');
+      rethrow; // Ensure UI knows it failed
+    }
+
+    // 2. Update auth metadata (Secondary cache for faster routing)
+    try {
+      await _supabase.auth.updateUser(
+        UserAttributes(
+          data: {
+            'full_name': name,
+            'is_profile_complete': true,
+          },
+        ),
+      );
+      debugPrint('Auth metadata updated successfully');
+    } catch (e) {
+      debugPrint('Auth metadata update warning: $e');
+      // We don't rethrow here because DB is already updated
     }
 
     await refreshProfile();

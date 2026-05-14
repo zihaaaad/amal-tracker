@@ -11,9 +11,11 @@ import '../../../../core/services/auth_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/theme_extension.dart';
 import '../../admin/presentation/screens/admin_task_screen.dart';
+import '../../auth/presentation/screens/onboarding_screen.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../tracker/providers/daily_log_provider.dart';
 import '../providers/settings_provider.dart';
+import 'profile_edit_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -33,6 +35,37 @@ class SettingsScreen extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         physics: const BouncingScrollPhysics(),
         children: [
+          // Profile Section
+          _buildSectionTitle(context, 'PERSONAL INFORMATION'),
+          profileAsync.when(
+            data: (profile) => _buildSettingsTile(
+              context,
+              icon: Icons.person_rounded,
+              title: profile?['full_name'] ?? 'Incomplete Profile',
+              subtitle: profile != null 
+                ? '${profile['department']} • ID: ${profile['employee_id']}'
+                : 'Tap to complete institutional records',
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                if (profile == null) {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const OnboardingScreen()));
+                } else {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileEditScreen()));
+                }
+              },
+            ),
+            loading: () => const Center(child: Padding(padding: EdgeInsets.all(8.0), child: CircularProgressIndicator())),
+            error: (_, __) => _buildSettingsTile(
+              context,
+              icon: Icons.error_outline_rounded,
+              title: 'Profile Error',
+              subtitle: 'Institutional records could not be loaded',
+              iconColor: AppColors.softCoral,
+              onTap: () => ref.invalidate(profileProvider),
+            ),
+          ),
+          const SizedBox(height: 32),
+
           // Theme Section
           _buildSectionTitle(context, 'APPEARANCE'),
           _buildSettingsTile(context, 
