@@ -40,21 +40,79 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.dispose();
   }
 
-  void _checkCelebration(double completion) {
+  void _checkCelebration(double completion, int streak) {
     if (completion >= 1.0 && !_hasCelebratedToday) {
       _hasCelebratedToday = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        // Success Haptic Choreography: Heavy followed by Medium
-        HapticFeedback.heavyImpact();
-        Future.delayed(const Duration(milliseconds: 300), () {
-          HapticFeedback.mediumImpact();
-        });
+        
+        // ── Perfect Month Milestone (30 Days) ─────────────────────
+        if (streak == 30) {
+          HapticFeedback.heavyImpact();
+          _showPerfectMonthDialog(context);
+        } else {
+          // Standard Daily Success Haptic Choreography
+          HapticFeedback.heavyImpact();
+          Future.delayed(const Duration(milliseconds: 300), () {
+            HapticFeedback.mediumImpact();
+          });
+        }
         _confettiController.play();
       });
     } else if (completion < 1.0) {
       _hasCelebratedToday = false;
     }
+  }
+
+  void _showPerfectMonthDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: context.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.warmAmber.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.stars_rounded, color: AppColors.warmAmber, size: 64),
+            ).animate().scale(duration: 600.ms, curve: Curves.elasticOut),
+            const SizedBox(height: 24),
+            Text(
+              'Perfect Month!',
+              style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w900, color: context.textPrimary),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Ma sha Allah! You have completed 30 consecutive days of spiritual discipline.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: context.textSecondary, fontSize: 14, height: 1.5),
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.sageGreen,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
+                ),
+                child: const Text('Continue Journey', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -80,7 +138,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     ref.listen(dailyLogProvider, (_, next) {
       final tasks = ref.read(tasksProvider).value ?? [];
-      _checkCelebration(next.calculateCompletion(tasks));
+      final currentStreak = ref.read(streakProvider);
+      _checkCelebration(next.calculateCompletion(tasks), currentStreak);
     });
 
     return Scaffold(

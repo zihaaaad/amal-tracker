@@ -202,7 +202,7 @@ class _CheckboxTaskCardState extends ConsumerState<_CheckboxTaskCard>
                       ),
                       AnimatedSwitcher(
                         duration: const Duration(milliseconds: 400),
-                        switchInCurve: Curves.backOut,
+                        switchInCurve: Curves.easeOutBack,
                         switchOutCurve: Curves.easeIn,
                         transitionBuilder: (child, animation) => ScaleTransition(
                           scale: animation,

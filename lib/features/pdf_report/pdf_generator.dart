@@ -12,7 +12,7 @@ class PdfGenerator {
       DateTime month, List<DailyLog> logs, List<AmalTask> tasks) async {
     final pdf = pw.Document(
       title: 'Amal Monthly Report',
-      author: 'Amal Tracker',
+      author: 'As-Sunnah Foundation',
     );
 
     final monthName = DateFormat('MMMM yyyy').format(month);
@@ -33,16 +33,17 @@ class PdfGenerator {
         build: (context) {
           return [
             _buildHeader(monthName),
-            pw.Divider(thickness: 0.5, color: PdfColors.grey300),
+            pw.SizedBox(height: 10),
+            pw.Divider(thickness: 1.5, color: PdfColor.fromHex('#4A6741')),
             pw.SizedBox(height: 20),
             _buildStatistics(logs, tasks),
             pw.SizedBox(height: 30),
             _buildInsights(logs, tasks),
             pw.SizedBox(height: 30),
-            _buildSectionTitle('DAILY LOG'),
+            _buildSectionTitle('INSTITUTIONAL DAILY PERFORMANCE LOG'),
             pw.SizedBox(height: 10),
             _buildDataTable(daysInMonth, logMap, tasks),
-            pw.SizedBox(height: 30),
+            pw.SizedBox(height: 40),
             _buildFooter(),
           ];
         },
@@ -55,35 +56,46 @@ class PdfGenerator {
   static pw.Widget _buildHeader(String monthName) {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: pw.CrossAxisAlignment.end,
+      crossAxisAlignment: pw.CrossAxisAlignment.center,
       children: [
         pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             pw.Text(
-              'AMAL TRACKER',
+              'AS-SUNNAH FOUNDATION',
               style: pw.TextStyle(
-                fontSize: 28,
+                fontSize: 18,
                 fontWeight: pw.FontWeight.bold,
-                color: PdfColor.fromHex('#4A6741'), // Sage Green
-                letterSpacing: 2,
+                color: PdfColor.fromHex('#4A6741'),
+                letterSpacing: 1.2,
               ),
             ),
-            pw.SizedBox(height: 4),
+            pw.SizedBox(height: 2),
             pw.Text(
-              'Monthly Progress Report | $monthName',
-              style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700),
+              'Institutional Spiritual Audit',
+              style: pw.TextStyle(
+                fontSize: 10,
+                color: PdfColors.grey600,
+                fontWeight: pw.FontWeight.bold,
+                letterSpacing: 1,
+              ),
             ),
           ],
         ),
-        pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.end,
-          children: [
-            pw.Text(
-              'Generated: ${DateFormat('dd MMM yyyy').format(DateTime.now())}',
-              style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey500),
+        pw.Container(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: pw.BoxDecoration(
+            color: PdfColor.fromHex('#4A6741'),
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+          ),
+          child: pw.Text(
+            monthName.toUpperCase(),
+            style: pw.TextStyle(
+              fontSize: 11,
+              fontWeight: pw.FontWeight.bold,
+              color: PdfColors.white,
             ),
-          ],
+          ),
         ),
       ],
     );
@@ -177,27 +189,27 @@ class PdfGenerator {
 
   static pw.Widget _buildDataTable(
       int daysInMonth, Map<int, DailyLog> logMap, List<AmalTask> tasks) {
-    final checkboxTasks =
-        tasks.where((t) => t.inputType == TaskInputType.checkbox).take(7).toList();
+    // Select top 8 core tasks for the institutional summary
+    final summaryTasks = tasks.take(8).toList();
 
     return pw.Table(
-      border: pw.TableBorder.all(color: PdfColors.grey200, width: 0.5),
+      border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
       columnWidths: {
-        0: const pw.FixedColumnWidth(30),
-        for (int i = 1; i <= checkboxTasks.length; i++) i: const pw.FlexColumnWidth(),
+        0: const pw.FixedColumnWidth(25),
+        for (int i = 1; i <= summaryTasks.length; i++) i: const pw.FlexColumnWidth(),
       },
       children: [
         pw.TableRow(
           decoration: const pw.BoxDecoration(color: PdfColors.grey100),
           children: [
             pw.Padding(
-              padding: const pw.EdgeInsets.all(6),
-              child: pw.Text('Day', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7)),
+              padding: const pw.EdgeInsets.all(5),
+              child: pw.Text('DAY', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 6)),
             ),
-            ...checkboxTasks.map((t) => pw.Padding(
-                  padding: const pw.EdgeInsets.all(6),
-                  child: pw.Text(t.title,
-                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 7),
+            ...summaryTasks.map((t) => pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text(t.title.toUpperCase(),
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 5),
                       textAlign: pw.TextAlign.center),
                 )),
           ],
@@ -206,25 +218,32 @@ class PdfGenerator {
           pw.TableRow(
             children: [
               pw.Padding(
-                padding: const pw.EdgeInsets.all(6),
-                child: pw.Text('$day', style: const pw.TextStyle(fontSize: 7)),
+                padding: const pw.EdgeInsets.all(5),
+                child: pw.Text('$day', style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold)),
               ),
-              ...checkboxTasks.map((t) => _buildCellMark(logMap[day]?.getBool(t.id))),
+              ...summaryTasks.map((t) => _buildCellMark(logMap[day], t)),
             ],
           ),
       ],
     );
   }
 
-  static pw.Widget _buildCellMark(bool? isCompleted) {
+  static pw.Widget _buildCellMark(DailyLog? log, AmalTask task) {
+    bool? isCompleted;
+    if (log != null) {
+      isCompleted = task.inputType == TaskInputType.checkbox 
+        ? log.getBool(task.id) 
+        : log.getCounter(task.id) >= 5;
+    }
+
     return pw.Container(
-      padding: const pw.EdgeInsets.all(6),
+      padding: const pw.EdgeInsets.all(5),
       child: pw.Center(
         child: pw.Text(
-          isCompleted == null ? '-' : (isCompleted ? 'v' : 'x'),
+          isCompleted == null ? '-' : (isCompleted ? 'YES' : 'NO'),
           style: pw.TextStyle(
-            fontSize: 8,
-            color: isCompleted == true ? PdfColors.green700 : PdfColors.grey400,
+            fontSize: 6,
+            color: isCompleted == true ? PdfColor.fromHex('#4A6741') : PdfColors.grey400,
             fontWeight: isCompleted == true ? pw.FontWeight.bold : pw.FontWeight.normal,
           ),
         ),
@@ -234,17 +253,50 @@ class PdfGenerator {
 
   static pw.Widget _buildFooter() {
     return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Divider(thickness: 0.5, color: PdfColors.grey300),
-        pw.SizedBox(height: 10),
         pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.center,
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Text(
-              'Steady Progress, Spiritual Excellence.',
-              style: pw.TextStyle(fontSize: 8, fontStyle: pw.FontStyle.italic, color: PdfColors.grey500),
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Container(
+                  width: 150,
+                  height: 1,
+                  color: PdfColors.grey400,
+                ),
+                pw.SizedBox(height: 5),
+                pw.Text('Employee Signature', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+              ],
+            ),
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.end,
+              children: [
+                pw.Container(
+                  width: 150,
+                  height: 1,
+                  color: PdfColors.grey400,
+                ),
+                pw.SizedBox(height: 5),
+                pw.Text('Departmental Verification', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+              ],
             ),
           ],
+        ),
+        pw.SizedBox(height: 30),
+        pw.Center(
+          child: pw.Text(
+            'This is a digitally generated institutional audit for the As-Sunnah Foundation.',
+            style: pw.TextStyle(fontSize: 7, color: PdfColors.grey500),
+          ),
+        ),
+        pw.SizedBox(height: 2),
+        pw.Center(
+          child: pw.Text(
+            'Generated via Amal Tracker • Spiritual Excellence at Scale',
+            style: pw.TextStyle(fontSize: 6, fontWeight: pw.FontWeight.bold, color: PdfColors.grey400),
+          ),
         ),
       ],
     );

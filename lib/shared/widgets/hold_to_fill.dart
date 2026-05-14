@@ -132,7 +132,7 @@ class _HoldToFillState extends State<HoldToFill>
               transitionBuilder: (Widget child, Animation<double> animation) {
                 return ScaleTransition(
                   scale: animation.drive(Tween(begin: 0.8, end: 1.0)
-                      .chain(CurveTween(curve: Curves.backOut))),
+                      .chain(CurveTween(curve: Curves.easeOutBack))),
                   child: FadeTransition(opacity: animation, child: child),
                 );
               },
