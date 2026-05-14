@@ -138,6 +138,7 @@ class TaskService {
 
   Future<void> softDeleteTask(String taskId) async {
     await _supabase.from('amal_tasks').update({'is_active': false}).eq('id', taskId);
+    await _refreshCache();
   }
 }
 

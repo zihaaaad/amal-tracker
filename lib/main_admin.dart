@@ -4,7 +4,7 @@ import 'app_core.dart';
 
 /// Entry point for the Foundation Admin Dashboard.
 void main() async {
-  await AppCore.init();
+  await AppCore.init(AppMode.admin);
   runApp(const ProviderScope(
     child: AmalTrackerApp(mode: AppMode.admin),
   ));

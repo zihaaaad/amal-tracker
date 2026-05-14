@@ -11,6 +11,8 @@ import 'package:local_auth/local_auth.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../core/services/admin_service.dart';
+
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
 
@@ -27,7 +29,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() => setState(() {}));
     _authenticate();
   }
 
@@ -105,6 +108,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
           tabs: const [
             Tab(text: 'Institutional Tasks'),
             Tab(text: 'Employees'),
+            Tab(text: 'Reports'),
           ],
         ),
       ),
@@ -116,6 +120,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
 
           // ─── EMPLOYEES TAB ──────────────────────────────────────────
           _buildEmployeesTab(context),
+
+          // ─── REPORTS TAB ────────────────────────────────────────────
+          _buildReportsTab(context),
         ],
       ),
       floatingActionButton: _tabController.index == 0 
@@ -280,6 +287,67 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
         ),
       ),
     ]);
+  }
+
+  Widget _buildReportsTab(BuildContext context) {
+    return FutureBuilder<GlobalStats>(
+      future: AdminService.instance.getGlobalStats(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
+
+        final stats = snapshot.data!;
+        
+        return ListView(
+          padding: const EdgeInsets.all(24),
+          children: [
+            Text('Daily Foundation Pulse', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(child: _buildStatCard(context, 'Total Staff', stats.totalEmployees.toString(), Icons.people_rounded)),
+                const SizedBox(width: 12),
+                Expanded(child: _buildStatCard(context, 'Logged Today', stats.activeToday.toString(), Icons.check_circle_rounded)),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Text('Weekly Top Performers', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            ...stats.topPerformers.map((e) => Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(color: context.surfaceCard, borderRadius: BorderRadius.circular(20), border: Border.all(color: context.glassBorder)),
+              child: Row(
+                children: [
+                  Text('${stats.topPerformers.indexOf(e) + 1}', style: TextStyle(fontWeight: FontWeight.w900, color: context.timeTint, fontSize: 18)),
+                  const SizedBox(width: 16),
+                  Expanded(child: Text(e['name'], style: const TextStyle(fontWeight: FontWeight.bold))),
+                  Text('${e['points']} pts', style: TextStyle(color: context.timeTint, fontWeight: FontWeight.w800)),
+                ],
+              ),
+            )),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildStatCard(BuildContext context, String label, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: context.surfaceCard, borderRadius: BorderRadius.circular(24), border: Border.all(color: context.glassBorder)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: context.timeTint),
+          const SizedBox(height: 12),
+          Text(value, style: GoogleFonts.outfit(fontSize: 28, fontWeight: FontWeight.w900)),
+          Text(label, style: TextStyle(color: context.textMuted, fontSize: 12, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
   }
 }
 

@@ -29,7 +29,11 @@ enum AppMode { client, admin }
 /// Big Tech Architecture: Centralized Application Core.
 /// Handles shared initialization, routing, and state management.
 class AppCore {
-  static Future<void> init() async {
+  static AppMode _currentMode = AppMode.client;
+  static AppMode get mode => _currentMode;
+
+  static Future<void> init(AppMode mode) async {
+    _currentMode = mode;
     WidgetsFlutterBinding.ensureInitialized();
 
     await SystemChrome.setPreferredOrientations([

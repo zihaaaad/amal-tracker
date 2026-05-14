@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../app_core.dart';
 
 class AuthService {
   AuthService._();
@@ -125,9 +126,14 @@ class AuthService {
   }
 
   Future<void> signInWithGoogle() async {
+    final isClient = AppCore.mode == AppMode.client;
+    final redirectUrl = isClient 
+        ? 'com.amaltracker.auth://callback' 
+        : 'com.amaltracker.admin.auth://callback';
+
     await _supabase.auth.signInWithOAuth(
       OAuthProvider.google,
-      redirectTo: 'com.amaltracker.auth://callback',
+      redirectTo: redirectUrl,
       authScreenLaunchMode: LaunchMode.externalApplication,
     );
   }

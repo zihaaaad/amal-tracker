@@ -4,7 +4,7 @@ import 'app_core.dart';
 
 /// Default entry point (Client Mode)
 void main() async {
-  await AppCore.init();
+  await AppCore.init(AppMode.client);
   runApp(const ProviderScope(
     child: AmalTrackerApp(mode: AppMode.client),
   ));

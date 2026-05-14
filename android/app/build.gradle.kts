@@ -21,14 +21,30 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        // Default ID (fallback)
         applicationId = "com.amaltracker.amal_tracker"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    flavorDimensions.add("app")
+    productFlavors {
+        create("client") {
+            dimension = "app"
+            applicationId = "com.amaltracker.app"
+            versionNameSuffix = "-client"
+            manifestPlaceholders["appName"] = "Amal Tracker"
+            manifestPlaceholders["authScheme"] = "com.amaltracker.auth"
+        }
+        create("admin") {
+            dimension = "app"
+            applicationId = "com.amaltracker.admin"
+            versionNameSuffix = "-admin"
+            manifestPlaceholders["appName"] = "Foundation Admin"
+            manifestPlaceholders["authScheme"] = "com.amaltracker.admin.auth"
+        }
     }
 
     buildTypes {
