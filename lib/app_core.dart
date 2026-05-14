@@ -36,34 +36,46 @@ class AppCore {
     _currentMode = mode;
     WidgetsFlutterBinding.ensureInitialized();
 
-    await SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
+    try {
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
 
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Colors.transparent,
-      systemNavigationBarIconBrightness: Brightness.light,
-    ));
+      SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarIconBrightness: Brightness.light,
+      ));
 
-    await Future.wait([
-      _initTimezone(),
-      DatabaseService.initialize(),
-      _prewarmAssets(),
-    ]);
+      // Parallel initialization with global timeout safety
+      await Future.wait([
+        _initTimezone().timeout(const Duration(seconds: 5)),
+        DatabaseService.initialize().timeout(const Duration(seconds: 10)),
+        _prewarmAssets().timeout(const Duration(seconds: 5)),
+      ]).catchError((e) {
+        debugPrint('Non-critical initialization error: $e');
+        return [];
+      });
 
-    await Supabase.initialize(
-      url: AppConstants.supabaseUrl,
-      anonKey: AppConstants.supabaseAnonKey,
-      authOptions: const FlutterAuthClientOptions(
-        authFlowType: AuthFlowType.pkce,
-      ),
-    );
+      // Supabase MUST initialize for Auth, but we add a safety timeout
+      await Supabase.initialize(
+        url: AppConstants.supabaseUrl,
+        anonKey: AppConstants.supabaseAnonKey,
+        authOptions: const FlutterAuthClientOptions(
+          authFlowType: AuthFlowType.pkce,
+        ),
+      ).timeout(const Duration(seconds: 15)).catchError((e) {
+        debugPrint('Supabase critical error: $e');
+        return Supabase.instance;
+      });
 
-    await NotificationService.initialize().catchError((_) {});
-    await BackgroundService.initialize().catchError((_) {});
+      await NotificationService.initialize().catchError((_) {});
+      await BackgroundService.initialize().catchError((_) {});
+    } catch (e) {
+      debugPrint('Global init error: $e');
+    }
   }
 
   static Future<void> _prewarmAssets() async {
@@ -118,10 +130,11 @@ class _AppRouter extends ConsumerWidget {
     // 2. Monitor Profile State (Source of Truth)
     final profileAsync = ref.watch(profileProvider);
 
-    // Show splash if we have a session but profile isn't loaded yet
+    // Show splash if auth is loading OR if we have a session but profile isn't loaded yet
+    final isAuthLoading = authAsync.isLoading;
     final isProfileLoading = session != null && profileAsync.isLoading;
 
-    if (isProfileLoading) {
+    if (isAuthLoading || isProfileLoading) {
       return const SplashScreen();
     }
 

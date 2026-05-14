@@ -4,7 +4,12 @@ import 'app_core.dart';
 
 /// Entry point for the Standard Employee Tracker.
 void main() async {
-  await AppCore.init(AppMode.client);
+  try {
+    await AppCore.init(AppMode.client);
+  } catch (e) {
+    debugPrint('Critical Initialization Failure: $e');
+  }
+
   runApp(const ProviderScope(
     child: AmalTrackerApp(mode: AppMode.client),
   ));
