@@ -148,12 +148,42 @@ class _AppRouter extends ConsumerWidget {
       // Hard Boundary Logic for Admin Target
       if (mode == AppMode.admin) {
         if (!AuthService.instance.isAdmin) {
-          return const Scaffold(
+          return Scaffold(
+            backgroundColor: context.surface,
             body: Center(
-              child: Text(
-                'Unauthorized Access\nAdmin Role Required',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontWeight: FontWeight.bold),
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.gpp_bad_rounded, size: 64, color: context.softCoral),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Unauthorized Access',
+                      style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w900, color: context.textPrimary),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Your account does not have the "Admin" role required for this application.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: context.textSecondary),
+                    ),
+                    const SizedBox(height: 32),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => AuthService.instance.signOut(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: context.softCoral.withValues(alpha: 0.1),
+                          foregroundColor: context.softCoral,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: const Text('Sign Out & Try Again', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
