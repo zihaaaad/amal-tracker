@@ -53,12 +53,17 @@ final monthLogsProvider = Provider<List<DailyLog>>((ref) {
   return DatabaseService.instance.getCurrentMonthLogs();
 });
 
+enum SyncStatus { idle, syncing, success, error, offline }
+
+final syncStatusProvider = StateProvider<SyncStatus>((ref) => SyncStatus.idle);
+
 /// Notifier for the daily log state with Auto-Sync capability.
 class DailyLogNotifier extends StateNotifier<DailyLog> {
   final DatabaseService _db;
+  final Ref _ref;
   Timer? _debounceTimer;
 
-  DailyLogNotifier(this._db) : super(_db.getTodayLog());
+  DailyLogNotifier(this._db, this._ref) : super(_db.getTodayLog());
 
   /// Toggle a boolean task with auto-sync.
   Future<void> toggleTask(String taskId) async {
@@ -78,14 +83,26 @@ class DailyLogNotifier extends StateNotifier<DailyLog> {
     _triggerAutoSync();
   }
 
-  /// Debounced sync to Supabase to prevent spamming the network.
+  /// Debounced sync to Supabase with status tracking.
   void _triggerAutoSync() {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(seconds: 3), () async {
+      _ref.read(syncStatusProvider.notifier).state = SyncStatus.syncing;
       try {
-        await _db.syncToCloud();
+        final result = await _db.syncToCloud();
+        if (result.isSuccess) {
+          _ref.read(syncStatusProvider.notifier).state = SyncStatus.success;
+          Future.delayed(const Duration(seconds: 2), () {
+            if (_ref.read(syncStatusProvider.notifier).state == SyncStatus.success) {
+              _ref.read(syncStatusProvider.notifier).state = SyncStatus.idle;
+            }
+          });
+        } else {
+          _ref.read(syncStatusProvider.notifier).state = 
+              result.isUnauthorized ? SyncStatus.offline : SyncStatus.error;
+        }
       } catch (e) {
-        // Silently handle sync errors (e.g., offline)
+        _ref.read(syncStatusProvider.notifier).state = SyncStatus.error;
       }
     });
   }

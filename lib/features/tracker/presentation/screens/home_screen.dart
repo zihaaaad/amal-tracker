@@ -147,7 +147,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     final task = tasks[index];
                                     
                                     // Contextual Dimming: Dim tasks not relevant to current time
-                                    final isRelevant = _isTaskRelevant(task.id, timeContext);
+                                    final isRelevant = _isTaskRelevant(task, timeContext);
                                     
                                     return Opacity(
                                       opacity: isRelevant ? 1.0 : 0.4,
@@ -269,12 +269,14 @@ class _HomeHeader extends StatelessWidget {
   final String dateStr;
   final String quote;
   final int hour;
+  final SyncStatus? syncStatus;
 
   const _HomeHeader({
     required this.greeting,
     required this.dateStr,
     required this.quote,
     required this.hour,
+    this.syncStatus,
   });
 
   @override
@@ -306,14 +308,22 @@ class _HomeHeader extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'AS-SUNNAH FOUNDATION',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.5,
-                        color: context.timeTint.withValues(alpha: 0.5),
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          'AS-SUNNAH FOUNDATION',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5,
+                            color: context.timeTint.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        if (syncStatus != null) ...[
+                          const SizedBox(width: 8),
+                          _SyncIndicator(status: syncStatus!),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -398,6 +408,74 @@ class _HomeHeader extends StatelessWidget {
     if (hour < 17) return Icons.wb_sunny_outlined;
     if (hour < 21) return Icons.wb_twilight_rounded;
     return Icons.bedtime_rounded;
+  }
+}
+
+// ─── Sync Indicator (Big Tech UX Pattern) ────────────────────────────────────
+
+class _SyncIndicator extends StatelessWidget {
+  final SyncStatus status;
+  const _SyncIndicator({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    if (status == SyncStatus.idle) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: _getStatusColor().withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _getStatusColor().withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (status == SyncStatus.syncing)
+            const SizedBox(
+              width: 8,
+              height: 8,
+              child: CircularProgressIndicator(strokeWidth: 1.5, color: Colors.blue),
+            )
+          else
+            Icon(_getStatusIcon(), size: 10, color: _getStatusColor()),
+          const SizedBox(width: 4),
+          Text(
+            _getStatusText(),
+            style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: _getStatusColor()),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 200.ms);
+  }
+
+  Color _getStatusColor() {
+    switch (status) {
+      case SyncStatus.syncing: return Colors.blue;
+      case SyncStatus.success: return AppColors.sageGreen;
+      case SyncStatus.error: return Colors.red;
+      case SyncStatus.offline: return Colors.orange;
+      default: return Colors.grey;
+    }
+  }
+
+  IconData _getStatusIcon() {
+    switch (status) {
+      case SyncStatus.success: return Icons.check_circle_rounded;
+      case SyncStatus.error: return Icons.error_rounded;
+      case SyncStatus.offline: return Icons.cloud_off_rounded;
+      default: return Icons.sync;
+    }
+  }
+
+  String _getStatusText() {
+    switch (status) {
+      case SyncStatus.syncing: return 'SYNCING';
+      case SyncStatus.success: return 'SAVED';
+      case SyncStatus.error: return 'RETRYING';
+      case SyncStatus.offline: return 'OFFLINE';
+      default: return '';
+    }
   }
 }
 

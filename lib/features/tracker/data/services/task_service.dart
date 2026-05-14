@@ -66,7 +66,7 @@ class TaskService {
     }
   }
 
-  void _refreshCache() async {
+  Future<void> _refreshCache() async {
     try {
       final response = await _supabase
           .from('amal_tasks')
