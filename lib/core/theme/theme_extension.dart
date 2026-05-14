@@ -15,6 +15,7 @@ extension ThemeContextExtension on BuildContext {
   Color get textOnAccent => isDark ? AppColors.textOnAccent : const Color(0xFFFFFFFF);
   
   Color get glassBorder => isDark ? AppColors.glassBorder : const Color(0x0F000000);
+  Color get softCoral => isDark ? AppColors.softCoral : const Color(0xFFE57373);
 
   Color get dynamicGlassBorder {
     final tint = timeTint;
