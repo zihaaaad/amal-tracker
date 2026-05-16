@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:local_auth/local_auth.dart';
@@ -24,7 +23,6 @@ class AdminDashboardScreen extends ConsumerStatefulWidget {
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
   String _userSearchQuery = '';
-  String _selectedDept = 'All';
   bool _isAuthenticating = true;
 
   @override
@@ -315,7 +313,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
                   } else {
                     await TaskService.instance.addTask(newTask);
                   }
-                  if (mounted) Navigator.pop(context);
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
                   ref.invalidate(tasksProvider);
                 },
                 child: Text(isEdit ? 'Save Changes' : 'Create Task'),
@@ -355,7 +354,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
                     titleController.text,
                     contentController.text,
                   );
-                  if (mounted) Navigator.pop(context);
+                  if (!context.mounted) return;
+                  Navigator.pop(context);
                   setState(() {});
                 },
                 child: const Text('Broadcast Notice'),
@@ -437,35 +437,6 @@ class _EmployeeTile extends StatelessWidget {
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
-  final String value;
-  final String label;
-
-  const _StatCard({required this.icon, required this.iconColor, required this.value, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.surfaceCard,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: context.glassBorder),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: iconColor, size: 24),
-          const SizedBox(height: 8),
-          Text(value, style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w900)),
-          Text(label, style: TextStyle(color: context.textMuted, fontSize: 10, fontWeight: FontWeight.bold)),
         ],
       ),
     );

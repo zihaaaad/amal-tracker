@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -15,8 +16,8 @@ import '../../auth/presentation/screens/onboarding_screen.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../tracker/providers/daily_log_provider.dart';
 import '../providers/settings_provider.dart';
-import 'profile_edit_screen.dart';
 import 'notice_board_screen.dart';
+import 'profile_edit_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});

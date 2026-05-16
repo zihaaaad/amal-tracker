@@ -177,7 +177,7 @@ class _AppRouter extends ConsumerWidget {
 
       // Hard Boundary Logic for Admin Target
       if (mode == AppMode.admin) {
-        final isAdmin = profile != null && (profile['role'] == 'admin' || profile['role'] == 'manager');
+        final isAdmin = profile['role'] == 'admin' || profile['role'] == 'manager';
         if (!isAdmin) {
           return Scaffold(
             backgroundColor: context.surface,

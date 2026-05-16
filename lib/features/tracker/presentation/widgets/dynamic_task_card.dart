@@ -1,9 +1,10 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -97,9 +98,11 @@ class _CheckboxTaskCardState extends ConsumerState<_CheckboxTaskCard>
             children: [
               SlidableAction(
                 onPressed: (_) async {
-                  HapticFeedback.selectionClick();
+                  await HapticFeedback.selectionClick();
                   await ref.read(dailyLogProvider.notifier).toggleTask(widget.task.id);
                 },
+
+
                 backgroundColor: Colors.transparent,
                 foregroundColor: isCompleted ? AppColors.softCoral : AppColors.sageGreen,
                 icon: isCompleted ? Icons.close_rounded : Icons.check_rounded,
@@ -335,8 +338,8 @@ class _CounterTaskCard extends ConsumerWidget {
                   currentValue: count,
                   maxValue: maxVal,
                   color: isDone ? AppColors.sageGreen : color,
-                  onValueChanged: (val) =>
-                      ref.read(dailyLogProvider.notifier).updateCounter(task.id, val),
+                  onValueChanged: (val) async =>
+                      await ref.read(dailyLogProvider.notifier).updateCounter(task.id, val),
                 ),
               ],
             ),

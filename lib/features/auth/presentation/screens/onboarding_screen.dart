@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -74,7 +76,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       );
 
       // 2. Force refresh the profile provider to trigger redirection in AppRouter
-      await ref.refresh(profileProvider.future);
+      unawaited(ref.refresh(profileProvider.future));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
