@@ -146,6 +146,8 @@ class AuthService {
         ? 'com.amaltracker.auth://callback' 
         : 'com.amaltracker.admin.auth://callback';
 
+    debugPrint('Initiating Google Login with Redirect: $redirectUrl');
+
     await _supabase.auth.signInWithOAuth(
       OAuthProvider.google,
       redirectTo: redirectUrl,

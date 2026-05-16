@@ -74,11 +74,16 @@ class AppCore {
         url: AppConstants.supabaseUrl,
         anonKey: AppConstants.supabaseAnonKey,
         authOptions: const FlutterAuthClientOptions(
-          authFlowType: AuthFlowType.implicit,
+          authFlowType: AuthFlowType.pkce,
         ),
       ).timeout(const Duration(seconds: 15)).catchError((e) {
         LoggerService.error('Supabase critical error', e);
         return Supabase.instance;
+      });
+
+      // Debug: Monitor Auth State at the Core level
+      Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+        LoggerService.info('Auth Event: ${data.event} | Session: ${data.session != null}');
       });
 
       await NotificationService.initialize().catchError((_) {});

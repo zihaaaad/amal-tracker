@@ -37,10 +37,24 @@ To ensure Google Login and Deep Linking work correctly, you MUST configure your 
     -   Add `com.amaltracker.admin.auth://callback`
     -   *Note:* Ensure there are no trailing slashes unless explicitly used in the code.
 
-2.  **External Providers**:
+2.  **External Providers (Google)**:
     -   Go to **Authentication** -> **Providers** -> **Google**.
     -   Ensure it is enabled and configured with your Google Client ID and Secret.
-    -   Enable **Skip nonce check** for standard OAuth flow if necessary.
+    -   **Skip nonce check**: Enable this for standard OAuth flows.
+
+### Google Cloud Console Checklist
+If the app returns to the login screen without showing a user in Supabase, check these in your [Google Cloud Console](https://console.cloud.google.com/):
+
+1.  **Authorized Redirect URIs**:
+    -   Find your Supabase Project URL (e.g., `https://xyz.supabase.co`).
+    -   Add the callback URI: `https://xyz.supabase.co/auth/v1/callback`
+2.  **Android Client ID**:
+    -   Create an **Android Client ID**.
+    -   **Package Name**: `com.amaltracker.app` (for Client) and `com.amaltracker.admin` (for Admin).
+    -   **SHA-1 Fingerprint**: You MUST add your machine's SHA-1 fingerprint. 
+    -   *Command to get SHA-1:* `keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android`
+3.  **Web Client ID**: 
+    -   Supabase requires a **Web Client ID** to handle the handshake. Copy the Client ID and Secret from the "Web Application" type credential into the Supabase Dashboard.
 
 ### Institutional Protection
 The system uses **Dynamic Auth Redirects**. The Client app redirects to `com.amaltracker.auth`, while the Admin app uses `com.amaltracker.admin.auth`. This prevents cross-app authentication leaks.
