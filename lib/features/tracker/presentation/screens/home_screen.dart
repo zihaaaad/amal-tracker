@@ -7,6 +7,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/database/database_service.dart';
 import '../../../../core/constants/quotes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/theme_extension.dart';
@@ -151,8 +152,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               data: (groupedTasks) {
                 return RefreshIndicator(
                   onRefresh: () async {
-                    HapticFeedback.mediumImpact();
-                    await ref.read(dailyLogProvider.notifier).syncToCloud();
+                    await HapticFeedback.mediumImpact();
+                    await DatabaseService.instance.syncToCloud();
                     await ref.refresh(tasksProvider.future);
                   },
                   backgroundColor: context.surfaceCard,
@@ -162,80 +163,81 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                       slivers: [
                         // ── Header with Quote ──────────────────────────
-                      SliverToBoxAdapter(
-                        child: _HomeHeader(
-                          greeting: greeting,
-                          dateStr: dateStr,
-                          quote: quote,
-                          hour: now.hour,
-                          syncStatus: syncStatus,
-                        ).animate().fadeIn(duration: 600.ms).slideY(begin: -0.1, end: 0, curve: Curves.easeOutCubic),
-                      ),
+                        SliverToBoxAdapter(
+                          child: _HomeHeader(
+                            greeting: greeting,
+                            dateStr: dateStr,
+                            quote: quote,
+                            hour: now.hour,
+                            syncStatus: syncStatus,
+                          ).animate().fadeIn(duration: 600.ms).slideY(begin: -0.1, end: 0, curve: Curves.easeOutCubic),
+                        ),
 
-                      // ── Progress Ring ────────────────────────────
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                          child: ProgressRing(
-                            percentage: completion,
-                            completedCount: dailyLog.getEarnedPoints(allTasks),
-                            totalCount: dailyLog.getTotalPoints(allTasks),
-                            streak: streak,
-                          ),
-                        ).animate().fadeIn(delay: 200.ms, duration: 600.ms).scale(begin: const Offset(0.95, 0.95)),
-                      ),
-
-                      // ── Task Categories ──────────────────────────
-                      ...groupedTasks.entries.map((entry) {
-                        final category = entry.key;
-                        final tasks = entry.value;
-                        final doneCount = tasks
-                            .where((t) =>
-                                t.inputType == TaskInputType.checkbox
-                                    ? dailyLog.getBool(t.id)
-                                    : dailyLog.getCounter(t.id) >= 5)
-                            .length;
-
-                        return SliverMainAxisGroup(
-                          slivers: [
-                            SliverToBoxAdapter(
-                              child: _SectionHeader(
-                                title: _getCategoryTitle(category),
-                                icon: _getCategoryIcon(category),
-                                color: _getCategoryColor(category),
-                                doneCount: doneCount,
-                                totalCount: tasks.length,
-                              ),
+                        // ── Progress Ring ────────────────────────────
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                            child: ProgressRing(
+                              percentage: completion,
+                              completedCount: dailyLog.getEarnedPoints(allTasks),
+                              totalCount: dailyLog.getTotalPoints(allTasks),
+                              streak: streak,
                             ),
-                            SliverPadding(
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                              sliver: SliverList(
-                                delegate: SliverChildBuilderDelegate(
-                                  (context, index) {
-                                    if (index >= tasks.length) return null;
-                                    final task = tasks[index];
-                                    
-                                    // Contextual Dimming: Dim tasks not relevant to current time
-                                    final isRelevant = _isTaskRelevant(task, timeContext);
-                                    
-                                    return Opacity(
-                                      opacity: isRelevant ? 1.0 : 0.4,
-                                      child: DynamicTaskCard(task: task),
-                                    )
-                                        .animate()
-                                        .fadeIn(delay: (300 + (index * 40)).ms, duration: 500.ms, curve: Curves.easeOutQuart)
-                                        .slideY(begin: 0.1, end: 0, curve: Curves.easeOutQuart);
-                                  },
-                                  childCount: tasks.length,
+                          ).animate().fadeIn(delay: 200.ms, duration: 600.ms).scale(begin: const Offset(0.95, 0.95)),
+                        ),
+
+                        // ── Task Categories ──────────────────────────
+                        ...groupedTasks.entries.map((entry) {
+                          final category = entry.key;
+                          final tasks = entry.value;
+                          final doneCount = tasks
+                              .where((t) =>
+                                  t.inputType == TaskInputType.checkbox
+                                      ? dailyLog.getBool(t.id)
+                                      : dailyLog.getCounter(t.id) >= 5)
+                              .length;
+
+                          return SliverMainAxisGroup(
+                            slivers: [
+                              SliverToBoxAdapter(
+                                child: _SectionHeader(
+                                  title: _getCategoryTitle(category),
+                                  icon: _getCategoryIcon(category),
+                                  color: _getCategoryColor(category),
+                                  doneCount: doneCount,
+                                  totalCount: tasks.length,
                                 ),
                               ),
-                            ),
-                          ],
-                        );
-                      }),
+                              SliverPadding(
+                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                                sliver: SliverList(
+                                  delegate: SliverChildBuilderDelegate(
+                                    (context, index) {
+                                      if (index >= tasks.length) return null;
+                                      final task = tasks[index];
 
-                      const SliverToBoxAdapter(child: SizedBox(height: 120)),
-                    ],
+                                      // Contextual Dimming: Dim tasks not relevant to current time
+                                      final isRelevant = _isTaskRelevant(task, timeContext);
+
+                                      return Opacity(
+                                        opacity: isRelevant ? 1.0 : 0.4,
+                                        child: DynamicTaskCard(task: task),
+                                      )
+                                          .animate()
+                                          .fadeIn(delay: (300 + (index * 40)).ms, duration: 500.ms, curve: Curves.easeOutQuart)
+                                          .slideY(begin: 0.1, end: 0, curve: Curves.easeOutQuart);
+                                    },
+                                    childCount: tasks.length,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        }),
+
+                        const SliverToBoxAdapter(child: SizedBox(height: 120)),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -244,7 +246,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               error: (err, stack) => Center(child: Text('Error: $err')),
             ),
-
             // ── Confetti ─────────────────────────────────────────
             Align(
               alignment: Alignment.topCenter,
