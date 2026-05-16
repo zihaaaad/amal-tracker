@@ -31,6 +31,7 @@ FOR SELECT USING (
 );
 
 -- INSERT: User can create their own profile (Onboarding)
+-- Note: is_profile_complete should be checked if needed, but basic UID check is safe.
 CREATE POLICY "Users can insert their own profile" ON public.profiles
 FOR INSERT WITH CHECK (auth.uid() = id);
 
