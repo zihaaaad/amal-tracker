@@ -149,11 +149,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           children: [
             groupedTasksAsync.when(
               data: (groupedTasks) {
-                return SlidableAutoCloseBehavior(
-                  child: CustomScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    slivers: [
-                      // ── Header with Quote ──────────────────────────
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    HapticFeedback.mediumImpact();
+                    await ref.read(dailyLogProvider.notifier).syncToCloud();
+                    await ref.refresh(tasksProvider.future);
+                  },
+                  backgroundColor: context.surfaceCard,
+                  color: context.timeTint,
+                  child: SlidableAutoCloseBehavior(
+                    child: CustomScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                      slivers: [
+                        // ── Header with Quote ──────────────────────────
                       SliverToBoxAdapter(
                         child: _HomeHeader(
                           greeting: greeting,

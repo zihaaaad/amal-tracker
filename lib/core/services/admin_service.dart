@@ -74,4 +74,23 @@ class AdminService {
       return GlobalStats(totalEmployees: 0, activeToday: 0, averagePoints: 0, topPerformers: []);
     }
   }
+
+  Future<List<Map<String, dynamic>>> getEmployeeMonthlyStats(String userId) async {
+    try {
+      final now = DateTime.now();
+      final firstDay = DateTime(now.year, now.month, 1).toIso8601String().split('T')[0];
+      
+      final response = await _supabase
+          .from('daily_logs')
+          .select('date, completion_data')
+          .eq('user_id', userId)
+          .gte('date', firstDay)
+          .order('date', ascending: true);
+      
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      debugPrint('Employee Stats Error: $e');
+      return [];
+    }
+  }
 }

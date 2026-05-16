@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:local_auth/local_auth.dart';
@@ -23,6 +24,7 @@ class AdminDashboardScreen extends ConsumerStatefulWidget {
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
   String _userSearchQuery = '';
+  String _taskSearchQuery = '';
   bool _isAuthenticating = true;
 
   @override
@@ -141,47 +143,52 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
   }
 
   Widget _buildTasksTab(BuildContext context, AsyncValue<List<AmalTask>> tasksAsync) {
-    return tasksAsync.when(
-      data: (tasks) => ListView.builder(
-        padding: const EdgeInsets.all(20),
-        itemCount: tasks.length,
-        itemBuilder: (context, index) => _TaskAdminTile(task: tasks[index]),
-      ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+    return Column(
+      children: [
+        _buildSearchField('Search tasks...', (v) => setState(() => _taskSearchQuery = v)),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () => ref.refresh(tasksProvider.future),
+            child: tasksAsync.when(
+              data: (tasks) {
+                final filtered = tasks.where((t) => t.title.toLowerCase().contains(_taskSearchQuery.toLowerCase())).toList();
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) => _TaskAdminTile(task: filtered[index]),
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('Error: $e')),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildEmployeesTab(BuildContext context) {
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.all(20),
-          child: TextField(
-            onChanged: (v) => setState(() => _userSearchQuery = v),
-            decoration: InputDecoration(
-              hintText: 'Search employees...',
-              prefixIcon: const Icon(Icons.search_rounded),
-              filled: true,
-              fillColor: context.surfaceCard,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-            ),
-          ),
-        ),
+        _buildSearchField('Search employees...', (v) => setState(() => _userSearchQuery = v)),
         Expanded(
-          child: FutureBuilder<List<EmployeeProfile>>(
-            future: ProfileService.instance.getAllEmployees(),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-              final employees = snapshot.data!
-                  .where((e) => e.fullName.toLowerCase().contains(_userSearchQuery.toLowerCase()))
-                  .toList();
-              return ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: employees.length,
-                itemBuilder: (context, index) => _EmployeeTile(profile: employees[index]),
-              );
-            },
+          child: RefreshIndicator(
+            onRefresh: () async => setState(() {}),
+            child: FutureBuilder<List<EmployeeProfile>>(
+              future: ProfileService.instance.getAllEmployees(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                final employees = snapshot.data!
+                    .where((e) => e.fullName.toLowerCase().contains(_userSearchQuery.toLowerCase()))
+                    .toList();
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  itemCount: employees.length,
+                  itemBuilder: (context, index) => _EmployeeTile(profile: employees[index]),
+                );
+              },
+            ),
           ),
         ),
       ],
@@ -189,72 +196,99 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
   }
 
   Widget _buildReportsTab(BuildContext context) {
-    return FutureBuilder<GlobalStats>(
-      future: AdminService.instance.getGlobalStats(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
+    return RefreshIndicator(
+      onRefresh: () async => setState(() {}),
+      child: FutureBuilder<GlobalStats>(
+        future: AdminService.instance.getGlobalStats(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
 
-        final stats = snapshot.data!;
-        
-        return ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
-            Text('Daily Foundation Pulse', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(child: _buildStatCard(context, 'Total Staff', stats.totalEmployees.toString(), Icons.people_rounded)),
-                const SizedBox(width: 12),
-                Expanded(child: _buildStatCard(context, 'Logged Today', stats.activeToday.toString(), Icons.check_circle_rounded)),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Text('Weekly Top Performers', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            ...stats.topPerformers.map((e) => Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: context.surfaceCard, borderRadius: BorderRadius.circular(20), border: Border.all(color: context.glassBorder)),
-              child: Row(
+          final stats = snapshot.data!;
+          
+          return ListView(
+            padding: const EdgeInsets.all(24),
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              Text('Daily Foundation Pulse', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              Row(
                 children: [
-                  Text('${stats.topPerformers.indexOf(e) + 1}', style: TextStyle(fontWeight: FontWeight.w900, color: context.timeTint, fontSize: 18)),
-                  const SizedBox(width: 16),
-                  Expanded(child: Text(e['name'], style: const TextStyle(fontWeight: FontWeight.bold))),
-                  Text('${e['points']} pts', style: TextStyle(color: context.timeTint, fontWeight: FontWeight.w800)),
+                  Expanded(child: _buildStatCard(context, 'Total Staff', stats.totalEmployees.toString(), Icons.people_rounded)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _buildStatCard(context, 'Logged Today', stats.activeToday.toString(), Icons.check_circle_rounded)),
                 ],
               ),
-            )),
-          ],
-        );
-      },
+              const SizedBox(height: 24),
+              Text('Weekly Top Performers', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              ...stats.topPerformers.map((e) => Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: context.surfaceCard, borderRadius: BorderRadius.circular(20), border: Border.all(color: context.glassBorder)),
+                child: Row(
+                  children: [
+                    Text('${stats.topPerformers.indexOf(e) + 1}', style: TextStyle(fontWeight: FontWeight.w900, color: context.timeTint, fontSize: 18)),
+                    const SizedBox(width: 16),
+                    Expanded(child: Text(e['name'], style: const TextStyle(fontWeight: FontWeight.bold))),
+                    Text('${e['points']} pts', style: TextStyle(color: context.timeTint, fontWeight: FontWeight.w800)),
+                  ],
+                ),
+              )),
+            ],
+          );
+        },
+      ),
     );
   }
 
   Widget _buildNoticesTab(BuildContext context) {
-    return FutureBuilder<List<Announcement>>(
-      future: AnnouncementService.instance.getAnnouncements(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-        final notices = snapshot.data ?? [];
-        return ListView.builder(
-          padding: const EdgeInsets.all(20),
-          itemCount: notices.length,
-          itemBuilder: (context, index) {
-            final notice = notices[index];
-            return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: ListTile(
-                title: Text(notice.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text(notice.content, maxLines: 2, overflow: TextOverflow.ellipsis),
-                trailing: const Icon(Icons.chevron_right_rounded),
-              ),
-            );
-          },
-        );
-      },
+    return RefreshIndicator(
+      onRefresh: () async => setState(() {}),
+      child: FutureBuilder<List<Announcement>>(
+        future: AnnouncementService.instance.getAnnouncements(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+          final notices = snapshot.data ?? [];
+          return ListView.builder(
+            padding: const EdgeInsets.all(20),
+            physics: const AlwaysScrollableScrollPhysics(),
+            itemCount: notices.length,
+            itemBuilder: (context, index) {
+              final notice = notices[index];
+              return Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  title: Text(notice.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text(notice.content, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSearchField(String hint, ValueChanged<String> onChanged) {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: TextField(
+        onChanged: onChanged,
+        decoration: InputDecoration(
+          hintText: hint,
+          prefixIcon: const Icon(Icons.search_rounded),
+          filled: true,
+          fillColor: context.surfaceCard,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        ),
+      ),
     );
   }
 
@@ -283,22 +317,25 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 24, right: 24, top: 24),
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(color: context.surface, borderRadius: const BorderRadius.vertical(top: Radius.circular(32))),
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 32, right: 32, top: 32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(isEdit ? 'Edit Task' : 'New Institutional Task', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
-            TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Task Title')),
-            const SizedBox(height: 12),
-            TextField(controller: categoryController, decoration: const InputDecoration(labelText: 'Category')),
-            const SizedBox(height: 12),
-            TextField(controller: pointsController, decoration: const InputDecoration(labelText: 'Points'), keyboardType: TextInputType.number),
-            const SizedBox(height: 32),
+            Text(isEdit ? 'Edit Task' : 'New Institutional Task', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 24),
+            _buildDialogField('Title', titleController),
+            const SizedBox(height: 16),
+            _buildDialogField('Category', categoryController),
+            const SizedBox(height: 16),
+            _buildDialogField('Points', pointsController, TextInputType.number),
+            const SizedBox(height: 40),
             SizedBox(
               width: double.infinity,
-              height: 56,
+              height: 60,
               child: ElevatedButton(
                 onPressed: () async {
                   final newTask = AmalTask(
@@ -317,13 +354,38 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
                   Navigator.pop(context);
                   ref.invalidate(tasksProvider);
                 },
-                child: Text(isEdit ? 'Save Changes' : 'Create Task'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: context.timeTint,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  elevation: 0,
+                ),
+                child: Text(isEdit ? 'Save Changes' : 'Create Task', style: const TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDialogField(String label, TextEditingController controller, [TextInputType? type]) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: context.textMuted)),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          keyboardType: type,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: context.surfaceSecondary,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+          ),
+        ),
+      ],
     );
   }
 
@@ -334,20 +396,23 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 24, right: 24, top: 24),
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(color: context.surface, borderRadius: const BorderRadius.vertical(top: Radius.circular(32))),
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 32, right: 32, top: 32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Post New Notice', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
-            TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Notice Title')),
-            const SizedBox(height: 12),
-            TextField(controller: contentController, decoration: const InputDecoration(labelText: 'Content'), maxLines: 3),
-            const SizedBox(height: 32),
+            Text('Post New Notice', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 24),
+            _buildDialogField('Notice Title', titleController),
+            const SizedBox(height: 16),
+            _buildDialogField('Content', contentController),
+            const SizedBox(height: 40),
             SizedBox(
               width: double.infinity,
-              height: 56,
+              height: 60,
               child: ElevatedButton(
                 onPressed: () async {
                   await AnnouncementService.instance.postAnnouncement(
@@ -358,10 +423,16 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
                   Navigator.pop(context);
                   setState(() {});
                 },
-                child: const Text('Broadcast Notice'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: context.timeTint,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  elevation: 0,
+                ),
+                child: const Text('Broadcast Notice', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
           ],
         ),
       ),
@@ -398,8 +469,21 @@ class _TaskAdminTile extends ConsumerWidget {
           ),
           IconButton(icon: const Icon(Icons.delete_outline_rounded, color: AppColors.softCoral), 
             onPressed: () async {
-              await TaskService.instance.softDeleteTask(task.id);
-              ref.invalidate(tasksProvider);
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Deactivate Task?'),
+                  content: const Text('This task will be hidden from all employees.'),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                    TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Deactivate', style: TextStyle(color: AppColors.softCoral))),
+                  ],
+                ),
+              );
+              if (confirm == true) {
+                await TaskService.instance.softDeleteTask(task.id);
+                ref.invalidate(tasksProvider);
+              }
             }),
         ],
       ),
@@ -421,23 +505,30 @@ class _EmployeeTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: context.glassBorder),
       ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: context.timeTint.withValues(alpha: 0.1),
-            child: Text(profile.fullName[0], style: TextStyle(color: context.timeTint, fontWeight: FontWeight.bold)),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(profile.fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                Text('${profile.department} • ${profile.subInstitute}', style: TextStyle(color: context.textMuted, fontSize: 11)),
-              ],
+      child: InkWell(
+        onTap: () {
+          // Future Enhancement: Navigate to Detail Screen
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Drill-down for ${profile.fullName} coming in v1.2')));
+        },
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: context.timeTint.withValues(alpha: 0.1),
+              child: Text(profile.fullName[0], style: TextStyle(color: context.timeTint, fontWeight: FontWeight.bold)),
             ),
-          ),
-        ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(profile.fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  Text('${profile.department} • ${profile.subInstitute}', style: TextStyle(color: context.textMuted, fontSize: 11)),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, size: 20, color: Colors.grey),
+          ],
+        ),
       ),
     );
   }
