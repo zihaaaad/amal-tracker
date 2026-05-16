@@ -1,4 +1,5 @@
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -55,6 +56,7 @@ class AppCore {
       await Supabase.initialize(
         url: AppConstants.supabaseUrl,
         anonKey: AppConstants.supabaseAnonKey,
+        debug: kDebugMode, // Enable verbose logging for auth troubleshooting
         authOptions: const FlutterAuthClientOptions(
           authFlowType: AuthFlowType.pkce,
         ),
@@ -65,10 +67,13 @@ class AppCore {
         LoggerService.info('Core Auth State Change: ${data.event} (Session: ${data.session != null})');
       });
 
-      // Platform Intent Monitoring (Deep Link Diagnostic)
+      // Platform Intent Monitoring (Deep Link Recovery)
       SystemChannels.lifecycle.setMessageHandler((msg) async {
         if (msg == AppLifecycleState.resumed.toString()) {
-          LoggerService.info('App Resumed - Checking for deep link code...');
+          final session = Supabase.instance.client.auth.currentSession;
+          if (session != null) {
+            LoggerService.info('Session recovered on resume for: ${session.user.email}');
+          }
         }
         return null;
       });

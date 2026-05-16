@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/theme_extension.dart';
@@ -21,13 +22,36 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   bool _isSignUp = false;
   bool _isLoading = false;
   Timer? _hangTimer;
+  Timer? _pollTimer;
 
   @override
   void dispose() {
     _hangTimer?.cancel();
+    _pollTimer?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  /// Proactive Session Polling (Big Tech Standard for Redirect Handling)
+  /// Checks the Supabase client memory directly every 2 seconds while waiting.
+  /// This ensures we catch the session even if the auth stream is delayed.
+  void _startSessionPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      if (!mounted || !_isLoading) {
+        timer.cancel();
+        return;
+      }
+      
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session != null) {
+        debugPrint('POLLER: Session found in memory! Redirecting...');
+        timer.cancel();
+        _hangTimer?.cancel();
+        if (mounted) setState(() => _isLoading = false);
+      }
+    });
   }
 
   Future<void> _handleAuth() async {
@@ -63,14 +87,18 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   Future<void> _handleGoogle() async {
     setState(() => _isLoading = true);
     
-    // Safety Reset Timer (25 seconds)
+    // Start Polling alongside redirect
+    _startSessionPolling();
+    
+    // Safety Reset Timer (30 seconds)
     _hangTimer?.cancel();
-    _hangTimer = Timer(const Duration(seconds: 25), () {
+    _hangTimer = Timer(const Duration(seconds: 30), () {
       if (mounted && _isLoading) {
         setState(() => _isLoading = false);
+        _pollTimer?.cancel();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Redirect timed out. Please ensure you selected a Google account or try again.'),
+            content: Text('Login taking longer than expected. Please check your internet or try again.'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -83,6 +111,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       // the redirect will resume the app and sessionProvider will update.
     } catch (e) {
       _hangTimer?.cancel();
+      _pollTimer?.cancel();
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -97,8 +126,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     // Proactive Session Arrival Listener
     ref.listen(sessionProvider, (prev, next) {
       if (next != null && mounted) {
-        debugPrint('AUTH_SCREEN: Session arrived! Clearing loading state...');
+        debugPrint('AUTH_SCREEN: Session arrived via stream! Clearing loading state...');
         _hangTimer?.cancel();
+        _pollTimer?.cancel();
         setState(() => _isLoading = false);
       }
     });
@@ -126,6 +156,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 onPressed: () {
                   setState(() => _isLoading = false);
                   _hangTimer?.cancel();
+                  _pollTimer?.cancel();
                 },
                 child: Text('Cancel and try again', style: TextStyle(color: context.timeTint)),
               ),
@@ -154,34 +185,24 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           ),
           
           SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 60),
-                  // App Icon / Logo
-                  Center(
-                    child: Container(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Institutional Branding
+                    Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
                         color: context.timeTint.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
-                        border: Border.all(color: context.timeTint.withValues(alpha: 0.2)),
                       ),
-                      child: Icon(
-                        Icons.auto_awesome_rounded,
-                        size: 48,
-                        color: context.timeTint,
-                      ),
+                      child: Icon(Icons.mosque_rounded, color: context.timeTint, size: 48),
                     ),
-                  ),
-                  const SizedBox(height: 32),
-                  
-                  // Welcome Text
-                  Center(
-                    child: Text(
-                      _isSignUp ? 'Join Amal Tracker' : 'Welcome Back',
+                    const SizedBox(height: 32),
+                    Text(
+                      _isSignUp ? 'Join As-Sunnah' : 'Assalamu Alaikum',
                       style: GoogleFonts.outfit(
                         fontSize: 28,
                         fontWeight: FontWeight.w900,
@@ -189,123 +210,77 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         letterSpacing: -0.5,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Center(
-                    child: Text(
-                      _isSignUp 
-                        ? 'Begin your journey of spiritual excellence' 
-                        : 'Continue your spiritual journey today',
+                    const SizedBox(height: 8),
+                    Text(
+                      _isSignUp ? 'Create your institutional profile' : 'Sign in to continue your spiritual journey',
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: context.textSecondary,
-                        height: 1.5,
+                      style: TextStyle(color: context.textSecondary, fontSize: 14),
+                    ),
+                    
+                    const SizedBox(height: 48),
+                    
+                    // Auth Fields
+                    _buildTextField(_emailController, 'Institutional Email', Icons.email_outlined, false),
+                    const SizedBox(height: 16),
+                    _buildTextField(_passwordController, 'Password', Icons.lock_outline, true),
+                    
+                    const SizedBox(height: 32),
+                    
+                    // Main Action Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _handleAuth,
+                        child: Text(_isSignUp ? 'Create Account' : 'Sign In'),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 48),
-
-                  // Form Fields
-                  _buildTextField(
-                    controller: _emailController,
-                    label: 'Email Address',
-                    icon: Icons.email_outlined,
-                    hint: 'name@example.com',
-                  ),
-                  const SizedBox(height: 20),
-                  _buildTextField(
-                    controller: _passwordController,
-                    label: 'Password',
-                    icon: Icons.lock_outline_rounded,
-                    hint: '••••••••',
-                    isPassword: true,
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Primary Action Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 58,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _handleAuth,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: context.timeTint,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                      ),
-                      child: _isLoading 
-                        ? const SizedBox(
-                            width: 20, height: 20, 
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                          )
-                        : Text(
-                            _isSignUp ? 'Create Account' : 'Sign In',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                          ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Divider
-                  Row(
-                    children: [
-                      Expanded(child: Divider(color: context.glassBorder)),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text('OR', style: TextStyle(color: context.textMuted, fontSize: 10, fontWeight: FontWeight.w800)),
-                      ),
-                      Expanded(child: Divider(color: context.glassBorder)),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Google Sign In
-                  SizedBox(
-                    width: double.infinity,
-                    height: 58,
-                    child: OutlinedButton.icon(
-                      onPressed: _isLoading ? null : _handleGoogle,
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: context.glassBorder),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                      ),
-                      icon: _isLoading 
-                        ? const SizedBox.shrink() 
-                        : const Icon(Icons.g_mobiledata_rounded, size: 32),
-                      label: Text(
-                        _isLoading ? 'Waiting...' : 'Continue with Google',
-                        style: TextStyle(
-                          color: context.textPrimary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Divider
+                    Row(
+                      children: [
+                        Expanded(child: Divider(color: context.glassBorder)),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text('OR', style: TextStyle(color: context.textMuted, fontSize: 10, fontWeight: FontWeight.bold)),
                         ),
+                        Expanded(child: Divider(color: context.glassBorder)),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Google Auth Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: OutlinedButton.icon(
+                        onPressed: _isLoading ? null : _handleGoogle,
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: context.glassBorder),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        icon: Image.network('https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg', height: 20,
+                          errorBuilder: (_, __, ___) => const Icon(Icons.g_mobiledata_rounded, size: 24),
+                        ),
+                        label: const Text('Continue with Google', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Toggle Auth Mode
-                  Center(
-                    child: TextButton(
+                    
+                    const SizedBox(height: 32),
+                    
+                    // Switch Auth Mode
+                    TextButton(
                       onPressed: () => setState(() => _isSignUp = !_isSignUp),
-                      child: RichText(
-                        text: TextSpan(
-                          style: TextStyle(color: context.textSecondary, fontSize: 14),
-                          children: [
-                            TextSpan(text: _isSignUp ? 'Already have an account? ' : "Don't have an account? "),
-                            TextSpan(
-                              text: _isSignUp ? 'Sign In' : 'Sign Up',
-                              style: TextStyle(color: context.timeTint, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
+                      child: Text(
+                        _isSignUp ? 'Already have an account? Sign In' : 'New employee? Create Account',
+                        style: TextStyle(color: context.timeTint, fontWeight: FontWeight.w600),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 40),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -314,45 +289,25 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required String hint,
-    bool isPassword = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: context.textMuted,
-            letterSpacing: 0.5,
-          ),
+  Widget _buildTextField(TextEditingController controller, String hint, IconData icon, bool isPassword) {
+    return Container(
+      decoration: BoxDecoration(
+        color: context.surfaceSecondary,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.borderSubtle),
+      ),
+      child: TextField(
+        controller: controller,
+        obscureText: isPassword,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+        decoration: InputDecoration(
+          prefixIcon: Icon(icon, color: context.textMuted, size: 20),
+          hintText: hint,
+          hintStyle: TextStyle(color: context.textMuted.withValues(alpha: 0.6)),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: context.surfaceCard,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: context.glassBorder),
-          ),
-          child: TextField(
-            controller: controller,
-            obscureText: isPassword,
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: TextStyle(color: context.textMuted.withValues(alpha: 0.5), fontSize: 14),
-              prefixIcon: Icon(icon, size: 20, color: context.timeTint.withValues(alpha: 0.6)),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
