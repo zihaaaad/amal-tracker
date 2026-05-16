@@ -13,27 +13,19 @@ final authStateProvider = StreamProvider<AuthState>((ref) {
 });
 
 /// Current session — The single source of truth for the application's auth state.
-/// This provider is designed to be resilient during browser-to-app redirects.
+/// This provider re-evaluates whenever the auth stream emits an event.
 final sessionProvider = Provider<Session?>((ref) {
-  final authAsync = ref.watch(authStateProvider);
+  // Subscribe to auth stream to trigger re-evaluation
+  ref.watch(authStateProvider);
   
-  // Big Tech Pattern: Direct client read as primary, stream as trigger.
-  // This ensures that even if the stream is 'loading', we check the actual client memory.
-  final currentSession = Supabase.instance.client.auth.currentSession;
-
-  authAsync.when(
-    data: (data) {
-      debugPrint('AUTH_DEBUG: Event ${data.event} | Session valid: ${data.session != null}');
-    },
-    loading: () => debugPrint('AUTH_DEBUG: Auth stream is warming up...'),
-    error: (e, _) => debugPrint('AUTH_DEBUG: Auth stream error: $e'),
-  );
-
-  if (currentSession != null) {
-    debugPrint('AUTH_DEBUG: Session confirmed for ${currentSession.user.email}');
+  // Always return the live session directly from memory
+  final session = Supabase.instance.client.auth.currentSession;
+  
+  if (session != null) {
+    debugPrint('PROVIDER: Session Active for ${session.user.email}');
   }
   
-  return currentSession;
+  return session;
 });
 
 /// Current authenticated user.
@@ -49,11 +41,13 @@ final profileProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
     AuthService.instance.clearProfile();
     return null;
   }
+  
   try {
+    // Fetch live profile from Supabase
     await AuthService.instance.refreshProfile();
     return AuthService.instance.currentProfile;
   } catch (e) {
     debugPrint('Profile Provider Error: $e');
-    return null; // Fallback to null instead of throwing and hanging the router
+    return null; // Graceful fallback
   }
 });

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -22,36 +23,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   bool _isSignUp = false;
   bool _isLoading = false;
   Timer? _hangTimer;
-  Timer? _pollTimer;
 
   @override
   void dispose() {
     _hangTimer?.cancel();
-    _pollTimer?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
-  }
-
-  /// Proactive Session Polling (Big Tech Standard for Redirect Handling)
-  /// Checks the Supabase client memory directly every 2 seconds while waiting.
-  /// This ensures we catch the session even if the auth stream is delayed.
-  void _startSessionPolling() {
-    _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      if (!mounted || !_isLoading) {
-        timer.cancel();
-        return;
-      }
-      
-      final session = Supabase.instance.client.auth.currentSession;
-      if (session != null) {
-        debugPrint('POLLER: Session found in memory! Redirecting...');
-        timer.cancel();
-        _hangTimer?.cancel();
-        if (mounted) setState(() => _isLoading = false);
-      }
-    });
   }
 
   Future<void> _handleAuth() async {
@@ -87,18 +65,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   Future<void> _handleGoogle() async {
     setState(() => _isLoading = true);
     
-    // Start Polling alongside redirect
-    _startSessionPolling();
-    
-    // Safety Reset Timer (30 seconds)
+    // Safety Reset Timer: 25 seconds of grace for the browser redirect
     _hangTimer?.cancel();
-    _hangTimer = Timer(const Duration(seconds: 30), () {
+    _hangTimer = Timer(const Duration(seconds: 25), () {
       if (mounted && _isLoading) {
         setState(() => _isLoading = false);
-        _pollTimer?.cancel();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Login taking longer than expected. Please check your internet or try again.'),
+            content: Text('Login timed out. Please ensure you selected an account or try again.'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -111,7 +85,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       // the redirect will resume the app and sessionProvider will update.
     } catch (e) {
       _hangTimer?.cancel();
-      _pollTimer?.cancel();
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -126,9 +99,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     // Proactive Session Arrival Listener
     ref.listen(sessionProvider, (prev, next) {
       if (next != null && mounted) {
-        debugPrint('AUTH_SCREEN: Session arrived via stream! Clearing loading state...');
         _hangTimer?.cancel();
-        _pollTimer?.cancel();
         setState(() => _isLoading = false);
       }
     });
@@ -147,18 +118,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: context.textPrimary),
               ),
               const SizedBox(height: 8),
-              Text(
+              const Text(
                 'Please select your Google account in the browser.',
-                style: TextStyle(color: context.textMuted, fontSize: 12),
+                style: TextStyle(color: Colors.grey, fontSize: 12),
               ),
               const SizedBox(height: 48),
               TextButton(
                 onPressed: () {
                   setState(() => _isLoading = false);
                   _hangTimer?.cancel();
-                  _pollTimer?.cancel();
                 },
-                child: Text('Cancel and try again', style: TextStyle(color: context.timeTint)),
+                child: Text('Cancel', style: TextStyle(color: context.timeTint)),
               ),
             ],
           ),
@@ -170,20 +140,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       backgroundColor: context.surface,
       body: Stack(
         children: [
-          // Background Gradient Flair
-          Positioned(
-            top: -100,
-            right: -50,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: context.timeTint.withValues(alpha: 0.05),
-              ),
-            ),
-          ),
-          
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -191,7 +147,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Institutional Branding
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
@@ -210,23 +165,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         letterSpacing: -0.5,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _isSignUp ? 'Create your institutional profile' : 'Sign in to continue your spiritual journey',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: context.textSecondary, fontSize: 14),
-                    ),
-                    
                     const SizedBox(height: 48),
-                    
-                    // Auth Fields
                     _buildTextField(_emailController, 'Institutional Email', Icons.email_outlined, false),
                     const SizedBox(height: 16),
                     _buildTextField(_passwordController, 'Password', Icons.lock_outline, true),
-                    
                     const SizedBox(height: 32),
-                    
-                    // Main Action Button
                     SizedBox(
                       width: double.infinity,
                       height: 56,
@@ -235,24 +178,18 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         child: Text(_isSignUp ? 'Create Account' : 'Sign In'),
                       ),
                     ),
-                    
                     const SizedBox(height: 24),
-                    
-                    // Divider
                     Row(
                       children: [
                         Expanded(child: Divider(color: context.glassBorder)),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text('OR', style: TextStyle(color: context.textMuted, fontSize: 10, fontWeight: FontWeight.bold)),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Text('OR', style: TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.bold)),
                         ),
                         Expanded(child: Divider(color: context.glassBorder)),
                       ],
                     ),
-                    
                     const SizedBox(height: 24),
-                    
-                    // Google Auth Button
                     SizedBox(
                       width: double.infinity,
                       height: 56,
@@ -262,16 +199,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           side: BorderSide(color: context.glassBorder),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
-                        icon: Image.network('https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg', height: 20,
-                          errorBuilder: (_, __, ___) => const Icon(Icons.g_mobiledata_rounded, size: 24),
-                        ),
+                        icon: const Icon(Icons.g_mobiledata_rounded, size: 28),
                         label: const Text('Continue with Google', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
                     ),
-                    
                     const SizedBox(height: 32),
-                    
-                    // Switch Auth Mode
                     TextButton(
                       onPressed: () => setState(() => _isSignUp = !_isSignUp),
                       child: Text(
@@ -303,7 +235,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         decoration: InputDecoration(
           prefixIcon: Icon(icon, color: context.textMuted, size: 20),
           hintText: hint,
-          hintStyle: TextStyle(color: context.textMuted.withValues(alpha: 0.6)),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),

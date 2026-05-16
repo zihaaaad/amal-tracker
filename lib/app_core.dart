@@ -1,9 +1,11 @@
 import 'dart:ui' as ui;
-import 'package:flutter/foundation.dart';
+
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -33,7 +35,6 @@ import 'features/tracker/presentation/screens/home_screen.dart';
 enum AppMode { client, admin }
 
 /// Big Tech Architecture: Centralized Application Core.
-/// Handles shared initialization, routing, and state management.
 class AppCore {
   static AppMode _currentMode = AppMode.client;
   static AppMode get mode => _currentMode;
@@ -42,7 +43,6 @@ class AppCore {
     _currentMode = mode;
     WidgetsFlutterBinding.ensureInitialized();
     
-    // Initialize Observability FIRST
     LoggerService.init();
     LoggerService.info('App Kernel: Booting in ${mode.name} mode...');
 
@@ -52,45 +52,31 @@ class AppCore {
         DeviceOrientation.portraitDown,
       ]);
 
-      // 1. Backend Connectivity (CRITICAL - Prioritize Deep Link Capture)
+      // 1. Supabase (Must be initialized early for Deep Linking)
+      // Reverted to simple initialization which was confirmed working.
       await Supabase.initialize(
         url: AppConstants.supabaseUrl,
         anonKey: AppConstants.supabaseAnonKey,
-        debug: kDebugMode, // Enable verbose logging for auth troubleshooting
-        authOptions: const FlutterAuthClientOptions(
-          authFlowType: AuthFlowType.pkce,
-        ),
-      ).timeout(const Duration(seconds: 15));
+        debug: kDebugMode,
+      );
 
-      // Debug: Aggressive Auth State Monitoring
-      Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-        LoggerService.info('Core Auth State Change: ${data.event} (Session: ${data.session != null})');
-      });
+      // 2. Multi-Target Localization
+      await EasyLocalization.ensureInitialized();
 
-      // Platform Intent Monitoring (Deep Link Recovery)
-      SystemChannels.lifecycle.setMessageHandler((msg) async {
-        if (msg == AppLifecycleState.resumed.toString()) {
-          final session = Supabase.instance.client.auth.currentSession;
-          if (session != null) {
-            LoggerService.info('Session recovered on resume for: ${session.user.email}');
-          }
-        }
-        return null;
-      });
-
-      // 2. Parallel secondary initializations
+      // 3. System Components
       await Future.wait([
-        _initTimezone().timeout(const Duration(seconds: 5)),
-        DatabaseService.initialize().timeout(const Duration(seconds: 10)),
-        _prewarmAssets().timeout(const Duration(seconds: 5)),
-        _initFirebase().timeout(const Duration(seconds: 15)),
+        _initTimezone(),
+        DatabaseService.initialize(),
+        _initFirebase(),
+        _prewarmAssets(),
       ]).catchError((e) {
-        LoggerService.warning('Non-critical initialization error: $e');
+        LoggerService.warning('Non-critical initialization warning: $e');
         return [];
       });
 
       await NotificationService.initialize().catchError((_) {});
       await BackgroundService.initialize().catchError((_) {});
+
     } catch (e) {
       LoggerService.error('Global init error', e);
     }
@@ -98,22 +84,18 @@ class AppCore {
 
   static Future<void> _initFirebase() async {
     try {
-      // Note: Requires google-services.json for Android and GoogleService-Info.plist for iOS
       await Firebase.initializeApp();
       await PushNotificationService.initialize();
       await PushNotificationService.subscribeToTopic('global_announcements');
     } catch (e) {
-      LoggerService.warning('Firebase init bypassed (missing config): $e');
+      LoggerService.warning('Firebase skipped: $e');
     }
   }
 
   static Future<void> _prewarmAssets() async {
-    // Layout pre-warm with explicit direction
     TextPainter(textDirection: ui.TextDirection.ltr).layout();
     try {
-      await GoogleFonts.pendingFonts([
-        GoogleFonts.outfit(),
-      ]).timeout(const Duration(seconds: 2));
+      await GoogleFonts.pendingFonts([GoogleFonts.outfit()]);
     } catch (_) {}
   }
 
@@ -156,100 +138,29 @@ class _AppRouter extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 1. Monitor Auth State
     final session = ref.watch(sessionProvider);
     final authAsync = ref.watch(authStateProvider);
-
-    // 2. Monitor Profile State (Source of Truth)
     final profileAsync = ref.watch(profileProvider);
 
-    // Show splash if auth is loading OR if we have a session but profile is in initial load
-    final isAuthLoading = authAsync.isLoading;
-    final isProfileLoading = session != null && profileAsync.isLoading && !profileAsync.hasValue;
-
-    if (isAuthLoading || isProfileLoading) {
+    // Initial Loading State
+    if (authAsync.isLoading || (session != null && profileAsync.isLoading && !profileAsync.hasValue)) {
       return const SplashScreen();
     }
 
-    // Handle Profile Fetch Failure (e.g. Network Error)
-    if (session != null && profileAsync.hasError) {
-      return Scaffold(
-        backgroundColor: context.surface,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.wifi_off_rounded, size: 48, color: context.softCoral),
-              const SizedBox(height: 16),
-              const Text('Connection Error', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Text('Unable to sync your institutional profile.', style: TextStyle(color: context.textMuted)),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => ref.invalidate(profileProvider),
-                child: const Text('Try Again'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // 3. Routing Logic
+    // ── Routing Decision Tree ─────────────────────────────────────
     if (session != null) {
       final profile = profileAsync.value;
-
-      // Ensure profile is complete before allowing entry to Main app
-      // Check the explicit complete flag from the database
-      final isComplete = profile != null && profile['is_profile_complete'] == true;
-
-      if (!isComplete) {
+      
+      // If profile is still null after loading, it means it doesn't exist yet -> Onboarding
+      if (profile == null || profile['is_profile_complete'] != true) {
         return const OnboardingScreen();
       }
 
-      // Hard Boundary Logic for Admin Target
       if (mode == AppMode.admin) {
-        final isAdmin = profile['role'] == 'admin' || profile['role'] == 'manager';
+        final role = profile['role'];
+        final isAdmin = role == 'admin' || role == 'manager';
         if (!isAdmin) {
-          return Scaffold(
-            backgroundColor: context.surface,
-            body: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.gpp_bad_rounded, size: 64, color: context.softCoral),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Unauthorized Access',
-                      style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w900, color: context.textPrimary),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Your account does not have the "Admin" role required for this application.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: context.textSecondary),
-                    ),
-                    const SizedBox(height: 32),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () => AuthService.instance.signOut(),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: context.softCoral.withValues(alpha: 0.1),
-                          foregroundColor: context.softCoral,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        ),
-                        child: const Text('Sign Out & Try Again', style: TextStyle(fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
+          return const _UnauthorizedScreen();
         }
         return const AdminDashboardScreen();
       }
@@ -257,8 +168,41 @@ class _AppRouter extends ConsumerWidget {
       return const MainNavigationScreen();
     }
 
-    // No session -> Auth Screen
     return const AuthScreen();
+  }
+}
+
+class _UnauthorizedScreen extends StatelessWidget {
+  const _UnauthorizedScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: context.surface,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.gpp_bad_rounded, size: 64, color: context.softCoral),
+              const SizedBox(height: 24),
+              Text('Unauthorized Access', style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 8),
+              const Text('This target requires Admin privileges.', textAlign: TextAlign.center),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => AuthService.instance.signOut(),
+                  child: const Text('Sign Out'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -341,34 +285,13 @@ class _FloatingNavBar extends StatelessWidget {
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(30),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _NavBarItem(
-              icon: Icons.home_rounded,
-              label: 'Today',
-              isActive: currentIndex == 0,
-              activeColor: activeColor,
-              onTap: () => onTap(0),
-            ),
-            _NavBarItem(
-              icon: Icons.bar_chart_rounded,
-              label: 'Stats',
-              isActive: currentIndex == 1,
-              activeColor: activeColor,
-              onTap: () => onTap(1),
-            ),
-            _NavBarItem(
-              icon: Icons.settings_rounded,
-              label: 'Menu',
-              isActive: currentIndex == 2,
-              activeColor: activeColor,
-              onTap: () => onTap(2),
-            ),
-          ],
-        ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _NavBarItem(icon: Icons.home_rounded, label: 'Today', isActive: currentIndex == 0, activeColor: activeColor, onTap: () => onTap(0)),
+          _NavBarItem(icon: Icons.bar_chart_rounded, label: 'Stats', isActive: currentIndex == 1, activeColor: activeColor, onTap: () => onTap(1)),
+          _NavBarItem(icon: Icons.settings_rounded, label: 'Menu', isActive: currentIndex == 2, activeColor: activeColor, onTap: () => onTap(2)),
+        ],
       ),
     );
   }
@@ -407,21 +330,10 @@ class _NavBarItem extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(
-              icon,
-              color: isActive ? activeColor : context.textMuted,
-              size: 24,
-            ),
+            Icon(icon, color: isActive ? activeColor : context.textMuted, size: 24),
             if (isActive) ...[
               const SizedBox(width: 8),
-              Text(
-                label,
-                style: TextStyle(
-                  color: activeColor,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 12,
-                ),
-              ),
+              Text(label, style: TextStyle(color: activeColor, fontWeight: FontWeight.w800, fontSize: 12)),
             ],
           ],
         ),
