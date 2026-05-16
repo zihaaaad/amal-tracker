@@ -42,6 +42,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   void initState() {
     super.initState();
+    // Pre-fill name from Google Metadata if available
     _nameController.text = AuthService.instance.currentUser?.userMetadata?['full_name'] ?? '';
   }
 
@@ -63,6 +64,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     await HapticFeedback.mediumImpact();
     
     try {
+      // 1. Save to Database
       await AuthService.instance.updateProfile(
         name: _nameController.text.trim(),
         phone: _phoneController.text.trim(),
@@ -71,21 +73,27 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         subInstitute: _selectedSubInst!,
       );
 
-      // Invalidate profile provider to trigger AppRouter redirection
-      ref.invalidate(profileProvider);
+      // 2. Force refresh the profile provider to trigger redirection in AppRouter
+      await ref.refresh(profileProvider.future);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Profile created successfully! Welcome to As-Sunnah Tracker.'),
+            content: Text('Institutional profile created! Redirecting...'),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        // Log the actual error for debugging
+        debugPrint('Onboarding Error: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save profile: $e'),
+            backgroundColor: context.softCoral,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -105,7 +113,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               const SizedBox(height: 20),
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: context.timeTint.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)),
+                decoration: BoxDecoration(
+                  color: context.timeTint.withValues(alpha: 0.1), 
+                  borderRadius: BorderRadius.circular(16)
+                ),
                 child: Icon(Icons.verified_user_rounded, color: context.timeTint, size: 32),
               ),
               const SizedBox(height: 24),
@@ -145,7 +156,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     : const Text('Complete Onboarding', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 40),
             ],
           ),
         ),
@@ -157,13 +168,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.grey, letterSpacing: 0.5)),
+        Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: context.textMuted, letterSpacing: 0.5)),
         const SizedBox(height: 10),
         Container(
           decoration: BoxDecoration(
-            color: context.surfaceCard,
+            color: context.surfaceSecondary,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: context.glassBorder),
+            border: Border.all(color: context.borderSubtle),
           ),
           child: TextField(
             controller: controller,
@@ -184,14 +195,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.grey, letterSpacing: 0.5)),
+        Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w800, color: context.textMuted, letterSpacing: 0.5)),
         const SizedBox(height: 10),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: context.surfaceCard,
+            color: context.surfaceSecondary,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: context.glassBorder),
+            border: Border.all(color: context.borderSubtle),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
@@ -199,6 +210,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               isExpanded: true,
               hint: Text('Select $label', style: TextStyle(color: context.textMuted, fontSize: 14)),
               icon: Icon(Icons.keyboard_arrow_down_rounded, color: context.timeTint),
+              dropdownColor: context.surfaceSecondary,
+              borderRadius: BorderRadius.circular(18),
               items: items.map((String item) {
                 return DropdownMenuItem<String>(
                   value: item,

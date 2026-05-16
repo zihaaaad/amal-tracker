@@ -165,14 +165,20 @@ class _AppRouter extends ConsumerWidget {
 
     // 3. Routing Logic
     if (session != null) {
-      // Profile is loaded here because profileAsync is not loading
-      if (!AuthService.instance.isProfileComplete) {
+      final profile = profileAsync.value;
+
+      // Ensure profile is complete before allowing entry to Main app
+      // Check the explicit complete flag from the database
+      final isComplete = profile != null && profile['is_profile_complete'] == true;
+
+      if (!isComplete) {
         return const OnboardingScreen();
       }
 
       // Hard Boundary Logic for Admin Target
       if (mode == AppMode.admin) {
-        if (!AuthService.instance.isAdmin) {
+        final isAdmin = profile != null && (profile['role'] == 'admin' || profile['role'] == 'manager');
+        if (!isAdmin) {
           return Scaffold(
             backgroundColor: context.surface,
             body: Center(
