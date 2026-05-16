@@ -21,15 +21,29 @@ The platform uses build flavors to manage application identity. This allows both
 | Client | `flutter run --flavor client -t lib/main_client.dart` | `flutter build apk --release --flavor client -t lib/main_client.dart` |
 | Admin | `flutter run --flavor admin -t lib/main_admin.dart` | `flutter build apk --release --flavor admin -t lib/main_admin.dart` |
 
-## Security Management
+## Security & Access Control
 
-### Access Control
-User access is governed by the `role` field within the institutional database profiles.
-*   Standard employees are limited to the Client application.
-*   Administrators are granted access to the Admin application, which requires secondary biometric authentication for every session.
+### Role-Based Access (RBAC)
+User roles are managed in the Supabase `profiles` table.
+-   **Role: 'employee'** - Can only access the Client app.
+-   **Role: 'admin'** - Can access both apps. Access to the Admin app is further gated by a mandatory biometric challenge.
 
-### Authentication Protection
-Unique authentication redirect schemes are employed to ensure that login callbacks are routed to the correct application target, preventing cross-application authentication leaks.
+### Supabase Dashboard Configuration (CRITICAL)
+To ensure Google Login and Deep Linking work correctly, you MUST configure your Supabase Dashboard:
+
+1.  **Allowed Redirect URLs**:
+    -   Go to **Authentication** -> **URL Configuration**.
+    -   Add `com.amaltracker.auth://callback`
+    -   Add `com.amaltracker.admin.auth://callback`
+    -   *Note:* Ensure there are no trailing slashes unless explicitly used in the code.
+
+2.  **External Providers**:
+    -   Go to **Authentication** -> **Providers** -> **Google**.
+    -   Ensure it is enabled and configured with your Google Client ID and Secret.
+    -   Enable **Skip nonce check** for standard OAuth flow if necessary.
+
+### Institutional Protection
+The system uses **Dynamic Auth Redirects**. The Client app redirects to `com.amaltracker.auth`, while the Admin app uses `com.amaltracker.admin.auth`. This prevents cross-app authentication leaks.
 
 ## Data Oversight and Reporting
 

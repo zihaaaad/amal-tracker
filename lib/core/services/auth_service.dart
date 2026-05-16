@@ -51,11 +51,13 @@ class AuthService {
     final user = currentUser;
     if (user == null) return;
     try {
+      // Big Tech Reliability: Network timeout for profile fetch
       final response = await _supabase
           .from('profiles')
           .select()
           .eq('id', user.id)
-          .maybeSingle();
+          .maybeSingle()
+          .timeout(const Duration(seconds: 10));
       
       debugPrint('Profile Refreshed: ${response != null ? 'Found' : 'Not Found'}');
       _currentProfile = response;

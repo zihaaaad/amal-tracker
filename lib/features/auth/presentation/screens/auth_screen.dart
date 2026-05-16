@@ -72,6 +72,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch session to clear local loading state if redirect happens
+    ref.listen(sessionProvider, (prev, next) {
+      if (next != null && mounted) {
+        setState(() => _isLoading = false);
+      }
+    });
+
     return Scaffold(
       backgroundColor: context.surface,
       body: Stack(

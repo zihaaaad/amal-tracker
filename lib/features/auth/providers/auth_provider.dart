@@ -9,16 +9,25 @@ import '../../../core/services/auth_service.dart';
 ///   - Token refresh
 ///   - Sign out
 final authStateProvider = StreamProvider<AuthState>((ref) {
-  return Supabase.instance.client.auth.onAuthStateChange;
+  final stream = Supabase.instance.client.auth.onAuthStateChange;
+  return stream;
 });
 
 /// Current session — reads directly from Supabase client (synchronous, always fresh).
 /// Re-evaluates whenever authStateProvider emits so routing stays in sync.
 final sessionProvider = Provider<Session?>((ref) {
   // Subscribe to auth stream so this provider invalidates on every auth event
-  ref.watch(authStateProvider);
-  // Return the live session directly from Supabase — never stale
-  return Supabase.instance.client.auth.currentSession;
+  final authState = ref.watch(authStateProvider);
+  
+  final session = Supabase.instance.client.auth.currentSession;
+  
+  if (session != null) {
+    debugPrint('Session Detected: ${session.user.id}');
+  } else {
+    debugPrint('No Session (Auth State: ${authState.value?.event})');
+  }
+  
+  return session;
 });
 
 /// Current authenticated user.
