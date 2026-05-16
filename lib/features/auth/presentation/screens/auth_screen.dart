@@ -60,14 +60,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     setState(() => _isLoading = true);
     try {
       await AuthService.instance.signInWithGoogle();
+      // Note: We do NOT set _isLoading = false here because 
+      // the redirect will resume the app and sessionProvider will update.
     } catch (e) {
       if (mounted) {
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(e.toString()), backgroundColor: AppColors.softCoral),
         );
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 

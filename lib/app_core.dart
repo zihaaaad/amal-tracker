@@ -74,7 +74,7 @@ class AppCore {
         url: AppConstants.supabaseUrl,
         anonKey: AppConstants.supabaseAnonKey,
         authOptions: const FlutterAuthClientOptions(
-          authFlowType: AuthFlowType.pkce,
+          authFlowType: AuthFlowType.implicit,
         ),
       ).timeout(const Duration(seconds: 15)).catchError((e) {
         LoggerService.error('Supabase critical error', e);
