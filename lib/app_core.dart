@@ -14,6 +14,7 @@ import 'core/constants/app_constants.dart';
 import 'core/database/database_service.dart';
 import 'core/services/auth_service.dart';
 import 'core/services/background_service.dart';
+import 'core/services/logger_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/push_notification_service.dart';
 import 'core/theme/app_theme.dart';
@@ -39,6 +40,10 @@ class AppCore {
   static Future<void> init(AppMode mode) async {
     _currentMode = mode;
     WidgetsFlutterBinding.ensureInitialized();
+    
+    // Initialize Observability FIRST
+    LoggerService.init();
+    LoggerService.info('App Kernel: Booting in ${mode.name} mode...');
 
     try {
       await SystemChrome.setPreferredOrientations([
@@ -60,7 +65,7 @@ class AppCore {
         _prewarmAssets().timeout(const Duration(seconds: 5)),
         _initFirebase().timeout(const Duration(seconds: 15)),
       ]).catchError((e) {
-        debugPrint('Non-critical initialization error: $e');
+        LoggerService.warning('Non-critical initialization error: $e');
         return [];
       });
 
@@ -72,14 +77,14 @@ class AppCore {
           authFlowType: AuthFlowType.pkce,
         ),
       ).timeout(const Duration(seconds: 15)).catchError((e) {
-        debugPrint('Supabase critical error: $e');
+        LoggerService.error('Supabase critical error', e);
         return Supabase.instance;
       });
 
       await NotificationService.initialize().catchError((_) {});
       await BackgroundService.initialize().catchError((_) {});
     } catch (e) {
-      debugPrint('Global init error: $e');
+      LoggerService.error('Global init error', e);
     }
   }
 
@@ -90,7 +95,7 @@ class AppCore {
       await PushNotificationService.initialize();
       await PushNotificationService.subscribeToTopic('global_announcements');
     } catch (e) {
-      debugPrint('Firebase init bypassed (missing config): $e');
+      LoggerService.warning('Firebase init bypassed (missing config): $e');
     }
   }
 
