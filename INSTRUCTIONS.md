@@ -53,8 +53,11 @@ If the app returns to the login screen without showing a user in Supabase, check
     -   **Package Name**: `com.amaltracker.app` (for Client) and `com.amaltracker.admin` (for Admin).
     -   **SHA-1 Fingerprint**: You MUST add your machine's SHA-1 fingerprint. 
     -   *Command to get SHA-1:* `keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android`
-3.  **Web Client ID**: 
-    -   Supabase requires a **Web Client ID** to handle the handshake. Copy the Client ID and Secret from the "Web Application" type credential into the Supabase Dashboard.
+3.  **Client ID Synchronization (CRITICAL)**: 
+    -   In **Supabase Dashboard** -> **Auth** -> **Providers** -> **Google**:
+    -   The **Client ID** and **Client Secret** MUST come from the **Web Application** credential in your Google Cloud Console.
+    -   **DO NOT** put your Android Client ID here. Supabase needs the Web ID to act as the intermediary proxy for the handshake.
+    -   Your **Android Client ID** is only used to register your SHA-1 and Package Name in Google Cloud to authorize the redirect back to the app.
 
 ### Institutional Protection
 The system uses **Dynamic Auth Redirects**. The Client app redirects to `com.amaltracker.auth`, while the Admin app uses `com.amaltracker.admin.auth`. This prevents cross-app authentication leaks.

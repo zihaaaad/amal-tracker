@@ -51,14 +51,29 @@ class AppCore {
         DeviceOrientation.portraitDown,
       ]);
 
-      SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: Colors.transparent,
-        systemNavigationBarIconBrightness: Brightness.light,
-      ));
+      // 1. Backend Connectivity (CRITICAL - Prioritize Deep Link Capture)
+      await Supabase.initialize(
+        url: AppConstants.supabaseUrl,
+        anonKey: AppConstants.supabaseAnonKey,
+        authOptions: const FlutterAuthClientOptions(
+          authFlowType: AuthFlowType.pkce,
+        ),
+      ).timeout(const Duration(seconds: 15));
 
-      // Parallel initialization with global timeout safety
+      // Debug: Aggressive Auth State Monitoring
+      Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+        LoggerService.info('Core Auth State Change: ${data.event} (Session: ${data.session != null})');
+      });
+
+      // Platform Intent Monitoring (Deep Link Diagnostic)
+      SystemChannels.lifecycle.setMessageHandler((msg) async {
+        if (msg == AppLifecycleState.resumed.toString()) {
+          LoggerService.info('App Resumed - Checking for deep link code...');
+        }
+        return null;
+      });
+
+      // 2. Parallel secondary initializations
       await Future.wait([
         _initTimezone().timeout(const Duration(seconds: 5)),
         DatabaseService.initialize().timeout(const Duration(seconds: 10)),
@@ -67,23 +82,6 @@ class AppCore {
       ]).catchError((e) {
         LoggerService.warning('Non-critical initialization error: $e');
         return [];
-      });
-
-      // Supabase MUST initialize for Auth, but we add a safety timeout
-      await Supabase.initialize(
-        url: AppConstants.supabaseUrl,
-        anonKey: AppConstants.supabaseAnonKey,
-        authOptions: const FlutterAuthClientOptions(
-          authFlowType: AuthFlowType.pkce,
-        ),
-      ).timeout(const Duration(seconds: 15)).catchError((e) {
-        LoggerService.error('Supabase critical error', e);
-        return Supabase.instance;
-      });
-
-      // Debug: Monitor Auth State at the Core level
-      Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-        LoggerService.info('Auth Event: ${data.event} | Session: ${data.session != null}');
       });
 
       await NotificationService.initialize().catchError((_) {});
@@ -160,12 +158,36 @@ class _AppRouter extends ConsumerWidget {
     // 2. Monitor Profile State (Source of Truth)
     final profileAsync = ref.watch(profileProvider);
 
-    // Show splash if auth is loading OR if we have a session but profile isn't loaded yet
+    // Show splash if auth is loading OR if we have a session but profile is in initial load
     final isAuthLoading = authAsync.isLoading;
-    final isProfileLoading = session != null && profileAsync.isLoading;
+    final isProfileLoading = session != null && profileAsync.isLoading && !profileAsync.hasValue;
 
     if (isAuthLoading || isProfileLoading) {
       return const SplashScreen();
+    }
+
+    // Handle Profile Fetch Failure (e.g. Network Error)
+    if (session != null && profileAsync.hasError) {
+      return Scaffold(
+        backgroundColor: context.surface,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.wifi_off_rounded, size: 48, color: context.softCoral),
+              const SizedBox(height: 16),
+              const Text('Connection Error', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text('Unable to sync your institutional profile.', style: TextStyle(color: context.textMuted)),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => ref.invalidate(profileProvider),
+                child: const Text('Try Again'),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     // 3. Routing Logic

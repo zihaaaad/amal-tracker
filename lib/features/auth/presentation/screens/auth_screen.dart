@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -18,9 +20,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   final _passwordController = TextEditingController();
   bool _isSignUp = false;
   bool _isLoading = false;
+  Timer? _hangTimer;
 
   @override
   void dispose() {
+    _hangTimer?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -58,11 +62,27 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   Future<void> _handleGoogle() async {
     setState(() => _isLoading = true);
+    
+    // Safety Reset Timer (25 seconds)
+    _hangTimer?.cancel();
+    _hangTimer = Timer(const Duration(seconds: 25), () {
+      if (mounted && _isLoading) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Redirect timed out. Please ensure you selected a Google account or try again.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    });
+
     try {
       await AuthService.instance.signInWithGoogle();
       // Note: We do NOT set _isLoading = false here because 
       // the redirect will resume the app and sessionProvider will update.
     } catch (e) {
+      _hangTimer?.cancel();
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -74,12 +94,46 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Watch session to clear local loading state if redirect happens
+    // Proactive Session Arrival Listener
     ref.listen(sessionProvider, (prev, next) {
       if (next != null && mounted) {
+        debugPrint('AUTH_SCREEN: Session arrived! Clearing loading state...');
+        _hangTimer?.cancel();
         setState(() => _isLoading = false);
       }
     });
+
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: context.surface,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 24),
+              Text(
+                'Waiting for Secure Redirect...',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: context.textPrimary),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Please select your Google account in the browser.',
+                style: TextStyle(color: context.textMuted, fontSize: 12),
+              ),
+              const SizedBox(height: 48),
+              TextButton(
+                onPressed: () {
+                  setState(() => _isLoading = false);
+                  _hangTimer?.cancel();
+                },
+                child: Text('Cancel and try again', style: TextStyle(color: context.timeTint)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: context.surface,

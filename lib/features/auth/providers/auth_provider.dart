@@ -9,25 +9,31 @@ import '../../../core/services/auth_service.dart';
 ///   - Token refresh
 ///   - Sign out
 final authStateProvider = StreamProvider<AuthState>((ref) {
-  final stream = Supabase.instance.client.auth.onAuthStateChange;
-  return stream;
+  return Supabase.instance.client.auth.onAuthStateChange;
 });
 
-/// Current session — reads directly from Supabase client (synchronous, always fresh).
-/// Re-evaluates whenever authStateProvider emits so routing stays in sync.
+/// Current session — The single source of truth for the application's auth state.
+/// This provider is designed to be resilient during browser-to-app redirects.
 final sessionProvider = Provider<Session?>((ref) {
-  // Subscribe to auth stream so this provider invalidates on every auth event
-  final authState = ref.watch(authStateProvider);
+  final authAsync = ref.watch(authStateProvider);
   
-  final session = Supabase.instance.client.auth.currentSession;
-  
-  if (session != null) {
-    debugPrint('Session Detected: ${session.user.id}');
-  } else {
-    debugPrint('No Session (Auth State: ${authState.value?.event})');
+  // Big Tech Pattern: Direct client read as primary, stream as trigger.
+  // This ensures that even if the stream is 'loading', we check the actual client memory.
+  final currentSession = Supabase.instance.client.auth.currentSession;
+
+  authAsync.when(
+    data: (data) {
+      debugPrint('AUTH_DEBUG: Event ${data.event} | Session valid: ${data.session != null}');
+    },
+    loading: () => debugPrint('AUTH_DEBUG: Auth stream is warming up...'),
+    error: (e, _) => debugPrint('AUTH_DEBUG: Auth stream error: $e'),
+  );
+
+  if (currentSession != null) {
+    debugPrint('AUTH_DEBUG: Session confirmed for ${currentSession.user.email}');
   }
   
-  return session;
+  return currentSession;
 });
 
 /// Current authenticated user.

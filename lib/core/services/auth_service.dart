@@ -151,7 +151,7 @@ class AuthService {
     await _supabase.auth.signInWithOAuth(
       OAuthProvider.google,
       redirectTo: redirectUrl,
-      authScreenLaunchMode: LaunchMode.externalApplication,
+      authScreenLaunchMode: LaunchMode.inAppBrowserView,
     );
   }
 
