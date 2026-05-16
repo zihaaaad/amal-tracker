@@ -16,6 +16,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../../tracker/providers/daily_log_provider.dart';
 import '../providers/settings_provider.dart';
 import 'profile_edit_screen.dart';
+import 'notice_board_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -98,6 +99,15 @@ class SettingsScreen extends ConsumerWidget {
           
           // Notifications
           _buildSectionTitle(context, 'COMMUNICATION'),
+          _buildSettingsTile(context, 
+            icon: Icons.campaign_rounded,
+            title: 'Foundation Notices',
+            subtitle: 'Official institutional announcements',
+            onTap: () {
+              HapticFeedback.mediumImpact();
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const NoticeBoardScreen()));
+            },
+          ),
           _buildSettingsTile(context, 
             icon: Icons.notifications_active_rounded,
             title: 'Smart Reminders',

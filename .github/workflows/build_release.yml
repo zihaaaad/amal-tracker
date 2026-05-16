@@ -37,6 +37,9 @@ jobs:
       - name: Analyze Code
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
+      - name: Run Tests
+        run: flutter test
+
       # ── Build Client APK ───────────────────────────────────────────
       - name: Build Client APK
         run: flutter build apk --release -t lib/main_client.dart --flavor client || flutter build apk --release -t lib/main_client.dart

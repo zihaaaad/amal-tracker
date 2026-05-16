@@ -6,6 +6,7 @@ import 'package:local_auth/local_auth.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/services/admin_service.dart';
+import '../../../../core/services/announcement_service.dart';
 import '../../../../core/services/profile_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/theme_extension.dart';
@@ -30,7 +31,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() => setState(() {}));
     _authenticate();
   }
@@ -38,45 +39,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && !_isAuthenticating) {
-      setState(() {
-        _isAuthenticating = true;
-      });
       _authenticate();
-    }
-  }
-
-  Future<void> _authenticate() async {
-    final LocalAuthentication auth = LocalAuthentication();
-    bool authenticated = false;
-    try {
-      final bool canAuthenticateWithBiometrics = await auth.canCheckBiometrics;
-      final bool canAuthenticate = canAuthenticateWithBiometrics || await auth.isDeviceSupported();
-      
-      if (!canAuthenticate) {
-        // Fallback: If device doesn't support secure auth, grant access (or handle via PIN)
-        authenticated = true;
-      } else {
-        authenticated = await auth.authenticate(
-          localizedReason: 'Authenticate to access Foundation Admin',
-          options: const AuthenticationOptions(
-            stickyAuth: true,
-            biometricOnly: false,
-          ),
-        );
-      }
-    } on PlatformException catch (_) {
-      debugPrint('Auth error occurred');
-      authenticated = false;
-    }
-
-    if (mounted) {
-      if (authenticated) {
-        setState(() {
-          _isAuthenticating = false;
-        });
-      } else {
-        Navigator.of(context).pop();
-      }
     }
   }
 
@@ -85,6 +48,33 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
     WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _authenticate() async {
+    final LocalAuthentication auth = LocalAuthentication();
+    try {
+      final bool canAuthenticateWithBiometrics = await auth.canCheckBiometrics;
+      final bool canAuthenticate = canAuthenticateWithBiometrics || await auth.isDeviceSupported();
+
+      if (!canAuthenticate) {
+        setState(() => _isAuthenticating = false);
+        return;
+      }
+
+      final bool didAuthenticate = await auth.authenticate(
+        localizedReason: 'Please authenticate to access the Foundation Dashboard',
+        options: const AuthenticationOptions(stickyAuth: true, biometricOnly: false),
+      );
+
+      if (didAuthenticate) {
+        setState(() => _isAuthenticating = false);
+      } else {
+        if (mounted) Navigator.pop(context);
+      }
+    } catch (e) {
+      debugPrint('Auth error: $e');
+      setState(() => _isAuthenticating = false);
+    }
   }
 
   @override
@@ -118,23 +108,20 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
           labelColor: context.timeTint,
           unselectedLabelColor: context.textMuted,
           tabs: const [
-            Tab(text: 'Institutional Tasks'),
+            Tab(text: 'Tasks'),
             Tab(text: 'Employees'),
             Tab(text: 'Reports'),
+            Tab(text: 'Notices'),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
-          // ─── TASKS TAB ──────────────────────────────────────────────
           _buildTasksTab(context, tasksAsync),
-
-          // ─── EMPLOYEES TAB ──────────────────────────────────────────
           _buildEmployeesTab(context),
-
-          // ─── REPORTS TAB ────────────────────────────────────────────
           _buildReportsTab(context),
+          _buildNoticesTab(context),
         ],
       ),
       floatingActionButton: _tabController.index == 0 
@@ -144,7 +131,14 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
             label: const Text('Add Task', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             icon: const Icon(Icons.add_rounded, color: Colors.white),
           )
-        : null,
+        : (_tabController.index == 3 
+            ? FloatingActionButton.extended(
+                onPressed: () => _showAnnouncementDialog(context),
+                backgroundColor: context.timeTint,
+                label: const Text('Post Notice', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                icon: const Icon(Icons.campaign_rounded, color: Colors.white),
+              )
+            : null),
     );
   }
 
@@ -161,144 +155,39 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
   }
 
   Widget _buildEmployeesTab(BuildContext context) {
-    return FutureBuilder<List<EmployeeProfile>>(
-      future: ProfileService.instance.getAllEmployees(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) return Center(child: Text('Error loading employees: ${snapshot.error}'));
-        
-        final all = snapshot.data ?? [];
-        final filtered = all.where((e) {
-          final matchesSearch = e.fullName.toLowerCase().contains(_userSearchQuery.toLowerCase()) || 
-                               e.email.toLowerCase().contains(_userSearchQuery.toLowerCase()) ||
-                               e.employeeId.contains(_userSearchQuery);
-          final matchesDept = _selectedDept == 'All' || e.department == _selectedDept;
-          return matchesSearch && matchesDept;
-        }).toList();
-
-        final depts = ['All', ...all.map((e) => e.department).toSet()];
-
-        return Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  TextField(
-                    onChanged: (v) => setState(() => _userSearchQuery = v),
-                    decoration: InputDecoration(
-                      hintText: 'Search by Name, Email or ID...',
-                      prefixIcon: const Icon(Icons.search_rounded),
-                      filled: true,
-                      fillColor: context.surfaceCard,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: depts.map((d) => Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: ChoiceChip(
-                          label: Text(d),
-                          selected: _selectedDept == d,
-                          onSelected: (val) => setState(() => _selectedDept = d),
-                          selectedColor: context.timeTint.withValues(alpha: 0.2),
-                          labelStyle: TextStyle(color: _selectedDept == d ? context.timeTint : context.textMuted),
-                        ),
-                      )).toList(),
-                    ),
-                  ),
-                ],
-              ),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(20),
+          child: TextField(
+            onChanged: (v) => setState(() => _userSearchQuery = v),
+            decoration: InputDecoration(
+              hintText: 'Search employees...',
+              prefixIcon: const Icon(Icons.search_rounded),
+              filled: true,
+              fillColor: context.surfaceCard,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
             ),
-            Expanded(
-              child: ListView.builder(
+          ),
+        ),
+        Expanded(
+          child: FutureBuilder<List<EmployeeProfile>>(
+            future: ProfileService.instance.getAllEmployees(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+              final employees = snapshot.data!
+                  .where((e) => e.fullName.toLowerCase().contains(_userSearchQuery.toLowerCase()))
+                  .toList();
+              return ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: filtered.length,
-                itemBuilder: (context, index) => _EmployeeTile(profile: filtered[index]),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showTaskDialog(BuildContext context, [AmalTask? task]) {
-    // Reusing previous logic but adapted to stateful widget
-    final isEdit = task != null;
-    final titleController = TextEditingController(text: task?.title);
-    final categoryController = TextEditingController(text: task?.category ?? 'habits');
-    final pointsController = TextEditingController(text: (task?.points ?? 1).toString());
-    TaskInputType selectedType = task?.inputType ?? TaskInputType.checkbox;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom + 32, top: 32, left: 24, right: 24),
-        decoration: BoxDecoration(color: context.surfaceElevated, borderRadius: const BorderRadius.vertical(top: Radius.circular(32))),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(isEdit ? 'Edit Task' : 'New Task', style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 24),
-            _buildField(context, 'Title', titleController, Icons.title_rounded),
-            const SizedBox(height: 16),
-            _buildField(context, 'Category', categoryController, Icons.category_rounded),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: () async {
-                  final newTask = AmalTask(
-                    id: isEdit ? task.id : const Uuid().v4(),
-                    title: titleController.text.trim(),
-                    category: categoryController.text.trim(),
-                    points: int.tryParse(pointsController.text) ?? 1,
-                    inputType: selectedType,
-                  );
-                  if (isEdit) {
-                    await TaskService.instance.updateTask(newTask);
-                  } else {
-                    await TaskService.instance.addTask(newTask);
-                  }
-                  ref.invalidate(tasksProvider);
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                  }
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: context.timeTint, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                child: Text(isEdit ? 'Update' : 'Create', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-            ),
-          ],
+                itemCount: employees.length,
+                itemBuilder: (context, index) => _EmployeeTile(profile: employees[index]),
+              );
+            },
+          ),
         ),
-      ),
+      ],
     );
-  }
-
-  Widget _buildField(BuildContext context, String label, TextEditingController controller, IconData icon) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.grey)),
-      const SizedBox(height: 8),
-      TextField(
-        controller: controller,
-        decoration: InputDecoration(
-          prefixIcon: Icon(icon, color: context.timeTint),
-          filled: true,
-          fillColor: context.surfaceOverlay,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        ),
-      ),
-    ]);
   }
 
   Widget _buildReportsTab(BuildContext context) {
@@ -346,6 +235,31 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
     );
   }
 
+  Widget _buildNoticesTab(BuildContext context) {
+    return FutureBuilder<List<Announcement>>(
+      future: AnnouncementService.instance.getAnnouncements(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        final notices = snapshot.data ?? [];
+        return ListView.builder(
+          padding: const EdgeInsets.all(20),
+          itemCount: notices.length,
+          itemBuilder: (context, index) {
+            final notice = notices[index];
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                title: Text(notice.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text(notice.content, maxLines: 2, overflow: TextOverflow.ellipsis),
+                trailing: const Icon(Icons.chevron_right_rounded),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildStatCard(BuildContext context, String label, String value, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -361,6 +275,98 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> wit
       ),
     );
   }
+
+  void _showTaskDialog(BuildContext context, [AmalTask? task]) {
+    final isEdit = task != null;
+    final titleController = TextEditingController(text: task?.title);
+    final categoryController = TextEditingController(text: task?.category ?? 'spiritual');
+    final pointsController = TextEditingController(text: task?.points.toString() ?? '1');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 24, right: 24, top: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(isEdit ? 'Edit Task' : 'New Institutional Task', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Task Title')),
+            const SizedBox(height: 12),
+            TextField(controller: categoryController, decoration: const InputDecoration(labelText: 'Category')),
+            const SizedBox(height: 12),
+            TextField(controller: pointsController, decoration: const InputDecoration(labelText: 'Points'), keyboardType: TextInputType.number),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: () async {
+                  final newTask = AmalTask(
+                    id: isEdit ? task.id : const Uuid().v4(),
+                    title: titleController.text,
+                    category: categoryController.text,
+                    points: int.tryParse(pointsController.text) ?? 1,
+                    inputType: task?.inputType ?? TaskInputType.checkbox,
+                  );
+                  if (isEdit) {
+                    await TaskService.instance.updateTask(newTask);
+                  } else {
+                    await TaskService.instance.addTask(newTask);
+                  }
+                  if (mounted) Navigator.pop(context);
+                  ref.invalidate(tasksProvider);
+                },
+                child: Text(isEdit ? 'Save Changes' : 'Create Task'),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAnnouncementDialog(BuildContext context) {
+    final titleController = TextEditingController();
+    final contentController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 24, right: 24, top: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Post New Notice', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Notice Title')),
+            const SizedBox(height: 12),
+            TextField(controller: contentController, decoration: const InputDecoration(labelText: 'Content'), maxLines: 3),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: () async {
+                  await AnnouncementService.instance.postAnnouncement(
+                    titleController.text,
+                    contentController.text,
+                  );
+                  if (mounted) Navigator.pop(context);
+                  setState(() {});
+                },
+                child: const Text('Broadcast Notice'),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _TaskAdminTile extends ConsumerWidget {
@@ -371,18 +377,31 @@ class _TaskAdminTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(color: context.surfaceCard, borderRadius: BorderRadius.circular(20), border: Border.all(color: context.glassBorder)),
-      child: ListTile(
-        leading: Icon(Icons.edit_note_rounded, color: context.timeTint),
-        title: Text(task.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text('${task.category} • ${task.points} pts'),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete_outline_rounded, color: AppColors.softCoral),
-          onPressed: () async {
-            await TaskService.instance.softDeleteTask(task.id);
-            ref.invalidate(tasksProvider);
-          },
-        ),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.surfaceCard,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: context.glassBorder),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(task.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 4),
+                Text('${task.category.toUpperCase()} • ${task.points} Points', 
+                    style: TextStyle(color: context.timeTint.withValues(alpha: 0.7), fontSize: 11, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+          IconButton(icon: const Icon(Icons.delete_outline_rounded, color: AppColors.softCoral), 
+            onPressed: () async {
+              await TaskService.instance.softDeleteTask(task.id);
+              ref.invalidate(tasksProvider);
+            }),
+        ],
       ),
     );
   }
@@ -397,22 +416,56 @@ class _EmployeeTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: context.surfaceCard, borderRadius: BorderRadius.circular(20), border: Border.all(color: context.glassBorder)),
+      decoration: BoxDecoration(
+        color: context.surfaceCard,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: context.glassBorder),
+      ),
       child: Row(
         children: [
-          CircleAvatar(backgroundColor: context.timeTint.withValues(alpha: 0.1), child: Text(profile.fullName[0], style: TextStyle(color: context.timeTint, fontWeight: FontWeight.bold))),
+          CircleAvatar(
+            backgroundColor: context.timeTint.withValues(alpha: 0.1),
+            child: Text(profile.fullName[0], style: TextStyle(color: context.timeTint, fontWeight: FontWeight.bold)),
+          ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(profile.fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                Text('${profile.department} • ID: ${profile.employeeId}', style: TextStyle(color: context.textMuted, fontSize: 12)),
-                Text(profile.subInstitute, style: TextStyle(color: context.timeTint.withValues(alpha: 0.7), fontSize: 11, fontWeight: FontWeight.w600)),
+                Text('${profile.department} • ${profile.subInstitute}', style: TextStyle(color: context.textMuted, fontSize: 11)),
               ],
             ),
           ),
-          IconButton(icon: const Icon(Icons.more_vert_rounded), onPressed: () {}),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String value;
+  final String label;
+
+  const _StatCard({required this.icon, required this.iconColor, required this.value, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.surfaceCard,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: context.glassBorder),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: iconColor, size: 24),
+          const SizedBox(height: 8),
+          Text(value, style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w900)),
+          Text(label, style: TextStyle(color: context.textMuted, fontSize: 10, fontWeight: FontWeight.bold)),
         ],
       ),
     );

@@ -129,3 +129,21 @@ INSERT INTO public.amal_tasks (id, title, subtitle, category, points, frequency,
 ('office_cleanliness', 'Workspace Cleanliness', 'Maintain a professional desk', 'professional', 2, 'daily', '984401', 4280523008),
 ('fajr_jamaat', 'Fajr with Jamaat', 'Pray at the Masjid', 'prayer', 5, 'daily', '984384', 4280172783)
 ON CONFLICT (id) DO NOTHING;
+
+-- ── 9. INSTITUTIONAL ANNOUNCEMENTS ────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.announcements (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  category TEXT DEFAULT 'general',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by UUID REFERENCES public.profiles(id)
+);
+
+ALTER TABLE public.announcements ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Everyone can view announcements" ON public.announcements
+  FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Admins can manage announcements" ON public.announcements
+  FOR ALL USING (check_is_admin());
