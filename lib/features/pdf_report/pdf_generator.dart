@@ -233,7 +233,7 @@ class PdfGenerator {
     if (log != null) {
       isCompleted = task.inputType == TaskInputType.checkbox 
         ? log.getBool(task.id) 
-        : log.getCounter(task.id) >= 5;
+        : log.getCounter(task.id) >= (task.points > 1 ? task.points : 5);
     }
 
     return pw.Container(

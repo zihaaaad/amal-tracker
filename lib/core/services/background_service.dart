@@ -27,9 +27,10 @@ void callbackDispatcher() {
       for (final task in tasks) {
         // If it's a scheduled task (Weekly/Monthly) and active today
         if (task.frequency != TaskFrequency.daily && _isTaskDueToday(task, now)) {
+          final counterMax = task.points > 1 ? task.points : 5;
           final isDone = task.inputType == TaskInputType.checkbox 
               ? todayLog.getBool(task.id) 
-              : todayLog.getCounter(task.id) >= 5;
+              : todayLog.getCounter(task.id) >= counterMax;
 
           if (!isDone) {
             await _showNotification(

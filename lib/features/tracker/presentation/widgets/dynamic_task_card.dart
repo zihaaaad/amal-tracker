@@ -240,7 +240,8 @@ class _CounterTaskCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = _categoryColor(task.category);
-    final maxVal = 5;
+    // Derive max from task points — tasks with higher points (e.g. Sunnah 12) use their own threshold
+    final maxVal = task.points > 1 ? task.points : 5;
     final isDone = count >= maxVal;
 
     return RepaintBoundary(

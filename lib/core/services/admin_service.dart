@@ -44,8 +44,9 @@ class AdminService {
 
       for (var log in recentLogs) {
         final userId = log['user_id'] as String;
-        final name = log['profiles']['full_name'] as String;
-        final data = log['completion_data'] as Map<String, dynamic>;
+        final profileData = log['profiles'];
+        final name = (profileData is Map ? profileData['full_name'] : null) as String? ?? 'Unknown';
+        final data = log['completion_data'] as Map<String, dynamic>? ?? {};
         
         int points = 0;
         data.forEach((_, value) {
@@ -57,8 +58,8 @@ class AdminService {
         userNames[userId] = name;
       }
 
-      final topPerformers = userPoints.entries.map((e) => {
-        'name': userNames[e.key],
+      final topPerformers = userPoints.entries.map((e) => <String, dynamic>{
+        'name': userNames[e.key] ?? 'Unknown',
         'points': e.value,
       }).toList();
       topPerformers.sort((a, b) => (b['points'] as int).compareTo(a['points'] as int));

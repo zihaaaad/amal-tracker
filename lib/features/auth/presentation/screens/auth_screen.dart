@@ -22,37 +22,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   final _passwordController = TextEditingController();
   bool _isSignUp = false;
   bool _isLoading = false;
-  Timer? _hangTimer;
-  Timer? _pollTimer;
 
   @override
   void dispose() {
-    _hangTimer?.cancel();
-    _pollTimer?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  /// Proactive Session Polling (Big Tech Standard for Redirect Handling)
-  /// Checks the Supabase client memory directly every 2 seconds while waiting.
-  void _startSessionPolling() {
-    _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      if (!mounted || !_isLoading) {
-        timer.cancel();
-        return;
-      }
-      
-      final session = Supabase.instance.client.auth.currentSession;
-      if (session != null) {
-        debugPrint('POLLER: Session found in memory! Redirecting...');
-        timer.cancel();
-        _hangTimer?.cancel();
-        if (mounted) setState(() => _isLoading = false);
-      }
-    });
-  }
+
 
   Future<void> _handleAuth() async {
     setState(() => _isLoading = true);
@@ -86,32 +64,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   Future<void> _handleGoogle() async {
     setState(() => _isLoading = true);
-    
-    // Start Polling alongside redirect to catch the session immediately on resume
-    _startSessionPolling();
-    
-    // Safety Reset Timer: 25 seconds of grace for the browser redirect
-    _hangTimer?.cancel();
-    _hangTimer = Timer(const Duration(seconds: 25), () {
-      if (mounted && _isLoading) {
-        setState(() => _isLoading = false);
-        _pollTimer?.cancel();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Login timed out. Please ensure you selected an account or try again.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    });
 
     try {
       await AuthService.instance.signInWithGoogle();
       // Note: We do NOT set _isLoading = false here because 
       // the redirect will resume the app and sessionProvider will update.
     } catch (e) {
-      _hangTimer?.cancel();
-      _pollTimer?.cancel();
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -127,8 +85,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     ref.listen(sessionProvider, (prev, next) {
       if (next != null && mounted) {
         debugPrint('AUTH_SCREEN: Session arrived via stream! Clearing loading state...');
-        _hangTimer?.cancel();
-        _pollTimer?.cancel();
         setState(() => _isLoading = false);
       }
     });

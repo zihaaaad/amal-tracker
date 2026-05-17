@@ -6,8 +6,15 @@ import 'package:intl/intl.dart';
 import '../../../core/services/announcement_service.dart';
 import '../../../core/theme/theme_extension.dart';
 
-class NoticeBoardScreen extends StatelessWidget {
+class NoticeBoardScreen extends StatefulWidget {
   const NoticeBoardScreen({super.key});
+
+  @override
+  State<NoticeBoardScreen> createState() => _NoticeBoardScreenState();
+}
+
+class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
+  Key _refreshKey = UniqueKey();
 
   @override
   Widget build(BuildContext context) {
@@ -19,13 +26,13 @@ class NoticeBoardScreen extends StatelessWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          HapticFeedback.mediumImpact();
-          // Force a rebuild of the FutureBuilder
-          (context as Element).markNeedsBuild();
+          await HapticFeedback.mediumImpact();
+          setState(() => _refreshKey = UniqueKey());
         },
         backgroundColor: context.surfaceCard,
         color: context.timeTint,
         child: FutureBuilder<List<Announcement>>(
+          key: _refreshKey,
           future: AnnouncementService.instance.getAnnouncements(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {

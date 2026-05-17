@@ -83,15 +83,7 @@ class DatabaseService {
       instance._prefs = await SharedPreferences.getInstance();
       instance._initialized = true;
       
-      // Run migration in background to avoid blocking the splash screen
-      unawaited(compute(_migrateInBackground, {
-        'keys': instance._prefs.getKeys().where((k) => k.startsWith('log_')).toList(),
-        'migrated': instance._prefs.getBool('isar_migrated') ?? false,
-      }).then((_) {}).catchError((e) {
-        debugPrint('Background migration failed: $e');
-      }));
-      
-      // Also run synchronously for small datasets (safe check)
+      // Migrate legacy SharedPreferences data to Isar
       await instance._migrateFromPrefs();
     } catch (e) {
       debugPrint('Database initialization error: $e');
@@ -103,10 +95,7 @@ class DatabaseService {
     return instance;
   }
 
-  static Future<void> _migrateInBackground(Map<String, dynamic> params) async {
-    // Placeholder for heavy migration logic in an isolate
-    // Actual Isar writes must happen on the main isolate
-  }
+
 
   Future<void> _migrateFromPrefs() async {
     final migrated = _prefs.getBool('isar_migrated') ?? false;
@@ -153,11 +142,13 @@ class DatabaseService {
   DailyLog getTodayLog() => getLog(DateTime.now());
 
   Future<void> saveLog(DailyLog log) async {
+    final existing = _isar.dailyLogEntrys.filter().dateEqualTo(log.date).findFirstSync();
     final entry = DailyLogEntry()
+      ..id = existing?.id ?? Isar.autoIncrement
       ..date = log.date
       ..valuesJson = json.encode(log.values)
       ..updatedAt = DateTime.now()
-      ..createdAt = DateTime.now();
+      ..createdAt = existing?.createdAt ?? DateTime.now();
 
     await _isar.writeTxn(() async {
       await _isar.dailyLogEntrys.put(entry);

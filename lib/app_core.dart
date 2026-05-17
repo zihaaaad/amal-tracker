@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
+import 'package:app_links/app_links.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
@@ -41,7 +43,6 @@ class AppCore {
 
   static Future<void> init(AppMode mode) async {
     _currentMode = mode;
-    WidgetsFlutterBinding.ensureInitialized();
     
     LoggerService.init();
     LoggerService.info('App Kernel: Booting in ${mode.name} mode...');
@@ -84,8 +85,53 @@ class AppCore {
       await NotificationService.initialize().catchError((_) {});
       await BackgroundService.initialize().catchError((_) {});
 
+      // 4. Deep Link Handler — Critical for OAuth PKCE flow completion
+      _initDeepLinkHandler();
+
     } catch (e) {
       LoggerService.error('Global init error', e);
+    }
+  }
+
+  static StreamSubscription? _deepLinkSub;
+
+  /// Listens for incoming deep links (OAuth callbacks) and exchanges the
+  /// PKCE authorization code for a session. Without this, Google sign-in
+  /// opens the browser but the app never receives the session back.
+  static void _initDeepLinkHandler() {
+    final appLinks = AppLinks();
+
+    // Handle link that launched the app (cold start)
+    appLinks.getInitialLink().then((uri) {
+      if (uri != null) _handleDeepLink(uri);
+    }).catchError((e) {
+      LoggerService.warning('Initial deep link error: $e');
+    });
+
+    // Handle links while the app is running (warm resume from browser)
+    _deepLinkSub?.cancel();
+    _deepLinkSub = appLinks.uriLinkStream.listen(
+      (uri) => _handleDeepLink(uri),
+      onError: (e) => LoggerService.warning('Deep link stream error: $e'),
+    );
+  }
+
+  static Future<void> _handleDeepLink(Uri uri) async {
+    LoggerService.info('Deep Link Received: $uri');
+
+    // Only process our auth callback URLs
+    final uriStr = uri.toString();
+    if (!uriStr.startsWith('com.amaltracker.auth://callback') &&
+        !uriStr.startsWith('com.amaltracker.admin.auth://callback')) {
+      return;
+    }
+
+    try {
+      // Exchange the PKCE authorization code for a session
+      await Supabase.instance.client.auth.getSessionFromUrl(uri);
+      LoggerService.info('OAuth session established successfully!');
+    } catch (e) {
+      LoggerService.error('Failed to exchange OAuth code for session', e);
     }
   }
 

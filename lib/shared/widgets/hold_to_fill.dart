@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -29,7 +30,7 @@ class HoldToFill extends StatefulWidget {
 
 class _HoldToFillState extends State<HoldToFill>
     with SingleTickerProviderStateMixin {
-  bool _isHolding = false;
+  Timer? _holdTimer;
   int _displayValue = 0;
 
   @override
@@ -47,18 +48,14 @@ class _HoldToFillState extends State<HoldToFill>
   }
 
   void _startHold() {
-    _isHolding = true;
-    _tickCounter();
-  }
-
-  void _tickCounter() async {
-    if (!_isHolding || !mounted) return;
-
-    await Future.delayed(const Duration(milliseconds: 220)); 
-    if (!_isHolding || !mounted) return;
-
-    _increment();
-    _tickCounter();
+    _holdTimer?.cancel();
+    _holdTimer = Timer.periodic(const Duration(milliseconds: 220), (_) {
+      if (!mounted) {
+        _stopHold();
+        return;
+      }
+      _increment();
+    });
   }
 
   void _increment() {
@@ -79,7 +76,14 @@ class _HoldToFillState extends State<HoldToFill>
   }
 
   void _stopHold() {
-    _isHolding = false;
+    _holdTimer?.cancel();
+    _holdTimer = null;
+  }
+
+  @override
+  void dispose() {
+    _holdTimer?.cancel();
+    super.dispose();
   }
 
   @override

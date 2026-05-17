@@ -194,7 +194,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               .where((t) =>
                                   t.inputType == TaskInputType.checkbox
                                       ? dailyLog.getBool(t.id)
-                                      : dailyLog.getCounter(t.id) >= 5)
+                                      : dailyLog.getCounter(t.id) >= (t.points > 1 ? t.points : 5))
                               .length;
 
                           return SliverMainAxisGroup(

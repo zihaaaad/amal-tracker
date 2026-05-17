@@ -199,13 +199,20 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     final now = DateTime.now();
     final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
 
+    // Build a date-keyed lookup map for correct day alignment
+    final logMap = <int, DailyLog>{};
+    for (final log in logs) {
+      try {
+        final day = DateTime.parse(log.date).day;
+        logMap[day] = log;
+      } catch (_) {}
+    }
+
     final spots = <FlSpot>[];
-    for (int i = 0; i < daysInMonth; i++) {
-      if (i < logs.length) {
-        spots.add(FlSpot(i.toDouble(), logs[i].calculateCompletion(tasks) * 100));
-      } else {
-        spots.add(FlSpot(i.toDouble(), 0));
-      }
+    for (int i = 1; i <= daysInMonth; i++) {
+      final log = logMap[i];
+      final completion = log != null ? log.calculateCompletion(tasks) * 100 : 0.0;
+      spots.add(FlSpot((i - 1).toDouble(), completion));
     }
 
     return Container(
