@@ -111,8 +111,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               TextButton(
                 onPressed: () {
                   setState(() => _isLoading = false);
-                  _hangTimer?.cancel();
-                  _pollTimer?.cancel();
                 },
                 child: Text('Cancel', style: TextStyle(color: context.timeTint)),
               ),
