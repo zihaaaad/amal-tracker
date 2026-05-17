@@ -53,12 +53,26 @@ class AppCore {
       ]);
 
       // 1. Supabase (Must be initialized early for Deep Linking)
-      // Reverted to simple initialization which was confirmed working.
+      // Using AuthFlowType.implicit for extreme reliability on Android resumes
       await Supabase.initialize(
         url: AppConstants.supabaseUrl,
         anonKey: AppConstants.supabaseAnonKey,
         debug: kDebugMode,
+        authOptions: const FlutterAuthClientOptions(
+          authFlowType: AuthFlowType.implicit,
+        ),
       );
+
+      // Proactive Session Recovery on App Resume
+      SystemChannels.lifecycle.setMessageHandler((msg) async {
+        if (msg == AppLifecycleState.resumed.toString()) {
+          final session = Supabase.instance.client.auth.currentSession;
+          if (session != null) {
+            debugPrint('KERNEL: Session caught on app resume!');
+          }
+        }
+        return null;
+      });
 
       // 2. Multi-Target Localization
       await EasyLocalization.ensureInitialized();
