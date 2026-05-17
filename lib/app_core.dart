@@ -52,26 +52,19 @@ class AppCore {
         DeviceOrientation.portraitDown,
       ]);
 
-      // 1. Supabase (Must be initialized early for Deep Linking)
-      // Using AuthFlowType.implicit for extreme reliability on Android resumes
+      // 1. Backend Connectivity (CRITICAL - Prioritize Deep Link Capture)
       await Supabase.initialize(
         url: AppConstants.supabaseUrl,
         anonKey: AppConstants.supabaseAnonKey,
-        debug: kDebugMode,
+        debug: true, // Enable verbose logging for auth troubleshooting
         authOptions: const FlutterAuthClientOptions(
-          authFlowType: AuthFlowType.implicit,
+          authFlowType: AuthFlowType.pkce,
         ),
-      );
+      ).timeout(const Duration(seconds: 15));
 
-      // Proactive Session Recovery on App Resume
-      SystemChannels.lifecycle.setMessageHandler((msg) async {
-        if (msg == AppLifecycleState.resumed.toString()) {
-          final session = Supabase.instance.client.auth.currentSession;
-          if (session != null) {
-            debugPrint('KERNEL: Session caught on app resume!');
-          }
-        }
-        return null;
+      // Debug: Aggressive Auth State Monitoring
+      Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+        LoggerService.info('Core Auth State Change: ${data.event} (Session: ${data.session != null})');
       });
 
       // 2. Multi-Target Localization
