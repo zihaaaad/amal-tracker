@@ -142,10 +142,10 @@ class AuthService {
 
   Future<void> signInWithGoogle() async {
     final isClient = AppCore.mode == AppMode.client;
-    // Symmetrical with AndroidManifest: com.amaltracker.auth://callback
+    // Standardized Redirect: Added trailing slash for protocol robustness
     final redirectUrl = isClient 
-        ? 'com.amaltracker.auth://callback' 
-        : 'com.amaltracker.admin.auth://callback';
+        ? 'com.amaltracker.auth://callback/' 
+        : 'com.amaltracker.admin.auth://callback/';
 
     debugPrint('Initiating Google Login with Redirect: $redirectUrl');
 
