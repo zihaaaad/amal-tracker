@@ -37,7 +37,6 @@ android {
             versionNameSuffix = "-client"
             manifestPlaceholders["appName"] = "Amal Tracker"
             manifestPlaceholders["authScheme"] = "com.amaltracker.auth"
-            manifestPlaceholders["authPath"] = "/callback/"
         }
         create("admin") {
             dimension = "app"
@@ -45,7 +44,6 @@ android {
             versionNameSuffix = "-admin"
             manifestPlaceholders["appName"] = "Foundation Admin"
             manifestPlaceholders["authScheme"] = "com.amaltracker.admin.auth"
-            manifestPlaceholders["authPath"] = "/callback/"
         }
     }
 
